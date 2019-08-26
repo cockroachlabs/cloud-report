@@ -1,0 +1,32 @@
+[
+  {
+    "name": "aws",
+    "machineTypes": [
+      "c5d.4xlarge",
+      "m5d.4xlarge",
+      "m5ad.4xlarge",
+      "i3.4xlarge",
+      "r5ad.4xlarge",
+      "r5d.4xlarge"
+    ],
+    "ebsMachineTypes": [
+      "c5.4xlarge",
+      "c5n.4xlarge",
+      "m5.4xlarge",
+      "m5a.4xlarge",
+      "r5a.4xlarge"
+    ]
+  },
+  {
+    "name": "gcp",
+    "machineTypes": [
+      "n2-standard-16",
+      "n2-highmem-16",
+      "n2-highcpu-16",
+      "n1-standard-16",
+      "n1-highmem-16",
+      "n1-highcpu-16"
+    ]
+  }
+]
+

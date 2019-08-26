@@ -1,0 +1,14 @@
+[
+    {
+        "name": "gcp",
+        "machineTypes": [
+        "n2-standard-16",
+        "n2-highmem-16",
+        "n2-highcpu-16",
+        "n1-standard-16",
+        "n1-highmem-16",
+        "n1-highcpu-16"
+        ]
+    }
+]
+
