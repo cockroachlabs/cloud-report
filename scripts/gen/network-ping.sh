@@ -5,7 +5,12 @@ then
       exit
 fi
 
-ping $SERVER > network-ping.log &
+# Run 5 pings per second
+ping -i 0.2 $SERVER > network-ping.log &
 sleep 60
 PINGPID=$(pidof ping)
-kill -2 $PINGPID
+
+if ! [ -z "$PINGPID" ]
+then
+      kill -2 $PINGPID
+fi

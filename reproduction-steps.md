@@ -1,28 +1,35 @@
 ## Microbenchmarks
 
-These instructions are an outline of how one would structure a program to automatically run the microbenchmarks for the cloud report. Alternatively, these steps could be done by hand (with slight modifications) or glued together with a big bash script.
+### Run on GCP & AWS
 
-1. Create two machines with specified options (cloud, machine type, disk type for AWS) using the steps outlined in `/deployment-steps.md`.
-1. Upload scripts to all machines (using the `/scripts` dir in the root of the repo). Make them executable.
-1. Execute scripts like this:
-    1. **Node 1**: `./scripts/cpu.sh`
-    1. **Node 1**: `./scripts/io.sh`
-    1. 
-        - **Node 2**: `./scripts/network-iperf-server.sh`
-        - **Node 1**: `./scripts/network-iperf-client.sh {pgurl:2}`
-    1. **Node 1**: `./scripts/network-ping.sh {pgurl:2}`
-1. Create directory `/{cloud}/{machinetype}/{dateYYMMDD}/{maxtest#++}/`
-1. Only once all scripts have finished, add the following files from each node to the newly created directory:
-    - **Node 1**:
-        - `cpu.log`
-        - `/mnt/data1/IO_LOAD_results.log`
-        - `/mnt/data1/IO_WR_results.log`
-        - `/mnt/data1/IO_RD_results.log`
-        - `network-iperf-client.log`
-        - `network-ping.log`
-    - **Node 2**:
-        - `network-iperf-server.log`
+To test all machines, run:
+~~~
+./cloud-report-2019
+~~~
 
-Note that you could loop through any part of this program any number of times you desire; you could run the same tests on the same machine, or run the same tests on multiple sets of machines to get a better understanding of the intrinsic variance in the cloud's VMs.
+Meaningful flags inlcude:
+** Flag ** | ** Operation **
+-----------|----------------
+`-cloudDetails` | Specify a JSON file to detail the machine types you want to test. Use `cloudDetails/default.json` as a template. <br/><br/>For any machines you want to test with EBS on AWS, make sure they're listed as `ebsMachineTypes`.
+`-skipio` | Skip the IO tests, which take a long time to complete
+`-iteration` | Run the benchmark tests _x_ times against the same machines. To run the tests against a separate set of machines, you must manually destroy the roachprod cluster that gets created.
 
-After this work is done, another process can go through and aggregate the raw data into a format that's easier to digest. That work is TBD.
+
+As noted above, you can choose some other set of machines to test by specifying another file with `-cloudDetails`.
+
+### Run on Azure
+
+1. Manually provision the machines you want to test on Azure, with two crucial considerations:
+
+    - The user name must match `whoami`
+    - The SSH key must be `~/.ssh/id_rsa.pub`
+    
+2. Run
+
+    ~~~
+    ./cloud-report-2019 -azure -node1 <public IP of node 1> -node2 <public IP of node 2>
+    ~~~
+
+### Results
+
+Results for each benchmark are automatically saved and parsed into CSVs in the `results` folder. How we'll ingest these into Google Sheets is TBD.

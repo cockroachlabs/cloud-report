@@ -92,12 +92,9 @@ sudo mount /dev/sdb1 cockroach-data
 
 1. Format the remote disk:
 
-	```
-	sudo gdisk /dev/sdc
-	n
-	p
-	w
-	sudo mkfs -t ext4 /dev/sdc1
+	````
+	sgdisk -n=1:2048:2145386462
+	yes | sudo mkfs -t ext4 /dev/sdc1
 	```
 
 2. Mount the attached disk:

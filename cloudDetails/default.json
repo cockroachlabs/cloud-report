@@ -1,0 +1,17 @@
+[
+    {
+      "name": "aws",
+      "machineTypes": [
+        "c5d.4xlarge"
+      ],
+      "ebsMachineTypes": [
+        "c5.4xlarge"
+      ]
+    },
+    {
+      "name": "gcp",
+      "machineTypes": [
+        "n1-standard-16"
+      ]
+    }
+  ]
