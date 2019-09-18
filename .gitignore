@@ -1,0 +1,7 @@
+cloud-report-2019
+scripts.zip
+logs/azure/*
+logs/aws/*
+logs/gcp/*
+credentials.json
+token.json
