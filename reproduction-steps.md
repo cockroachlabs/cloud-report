@@ -1,8 +1,22 @@
+# Prep
+
+## Username
+
+If your laptop's username (`whoami`) is not the same as your Cockroach username, please export a global variable (e.g. `.bashrc`) called `CRL_USERNAME`.
+
+This username must also be the same as the username you will use to log into VMs.
+
+## SSH Key
+
+You must use the SSH key in `~/.ssh/id_rsa` to log into any non-`roachprod` VMs, e.g. on-prem machines.
+
+If you need to use a different SSH key, swap it in for your `~/.ssh/id_rsa`.
+
 ## Setting up Google Drive Access
 
-The enclosed binary relies on Google Drive access to automatically post its results to a spreadsheet.
+Unless you're running the enclosed binary through the `-on-prem` option, it relies on Google Drive access to automatically post its results to a spreadsheet.
 
-To execute the binary, you must...
+For this to work, you must set up Google Drive Access:
 
 1. Go to the [API console](https://console.developers.google.com/).
 1. Switch to your **@cockroachlabs.com** account, and the **cockroach-shared** project.
@@ -28,26 +42,26 @@ Build the binary:
 go build
 ```
 
-## Microbenchmarks
+# Microbenchmarks
 
-### Run on GCP & AWS
+## Run on GCP & AWS
 
 To test all machines, run:
 ~~~
 ./cloud-report-2019
 ~~~
 
-Meaningful flags inlcude:
+Meaningful flags include:
 
 ** Flag ** | ** Operation **
 -----------|----------------
-`-cloudDetails` | Specify a JSON file to detail the machine types you want to test. Use `cloudDetails/default.json` as a template. <br/><br/>For any machines you want to test with EBS on AWS, make sure they're listed as `ebsMachineTypes`.
+`-cloud-details` | Specify a JSON file to detail the machine types you want to test. Use `cloudDetails/default.json` as a template. <br/><br/>For any machines you want to test with EBS on AWS, make sure they're listed as `ebsMachineTypes`.
 `-io-skip` | Skip the IO tests, which take a long time to complete
 `-iterations` | Run the benchmark tests _x_ times against the same machines. To run the tests against a separate set of machines, you must manually destroy the roachprod cluster that gets created.
 
-As noted above, you can choose some other set of machines to test by specifying another file with `-cloudDetails`.
+As noted above, you can choose some other set of machines to test by specifying another file with `-cloud-details`.
 
-### Run on Azure
+## Run on Azure
 
 1. Manually provision the machines you want to test on Azure, with a few crucial considerations:
 
@@ -61,13 +75,44 @@ As noted above, you can choose some other set of machines to test by specifying 
     ./cloud-report-2019 -azure -node1 <public IP of node 1> -node2 <public IP of node 2>
     ~~~
 
-Meaningful flags inlcude:
+Meaningful flags include:
 
 ** Flag ** | ** Operation **
 -----------|----------------
 `-io-skip` | Skip the IO tests, which take a long time to complete
 `-iterations` | Run the benchmark tests _x_ times against the same machines.
 
-### Results
+## Run on Arbitrary Platforms/On-Prem
 
-Results for each benchmark are automatically saved and parsed into CSVs in the `results` folder. These 
+**NOTE**: This method _does not_ persist any results besides to your local machine. Or, phrased another way, these results are not stored to Google Sheets.
+
+1. Manually provision the machines you want to test, with a few crucial considerations:
+
+    - The SSH key must be `~/.ssh/id_rsa`
+    - `-node2` will work as a server for `-node1`, so should be on the same subnet. However, you can override this behavior by specifying `-node2-internal` to any IP address you'd like.
+
+2. Run...
+    ```
+    ./cloud-report-2019 -on-prem -node1 <public IP of node 1> -node2 <public IP of node 2>
+    ```
+
+Meaningful flags include:
+
+** Flag ** | ** Operation **
+-----------|----------------
+`-io-skip` | Skip the IO tests, which take a long time to complete
+`-iterations` | Run the benchmark tests _x_ times against the same machines.
+`machine-type` | Store the results of this run under `results/on-prem/<machine-type>`; if not set, stores results in `results/on-prem/<node1-ip>`
+`-node2-internal` | If we can't automatically detect the second node's internal IP address, you might need to pass it in manually.
+
+# Results
+
+Results for each benchmark are automatically saved and parsed into CSVs in the `results` folder with the following structure:
+
+`results/<platform>/<machine type>/<date>/<run id>`
+
+At the end of results, there will be `.log` files for all completed benchmarks, and `.csv` files for everything that was successfully parsed (and potentially uploaded). If there are no `.csv` files, the results were not parsed and were definitely not uploaded.
+
+### Aggregate
+
+Though it currently has no use or purpose, you can aggregate all of the results in the `results` dir by running the script in `scripts/aggregate`. Note that this should roughly match what is stored on Google Sheets and should make it easier to move this data into a database (e.g. Cockroach).
