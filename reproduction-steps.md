@@ -42,6 +42,26 @@ Build the binary:
 go build
 ```
 
+## Build a Good Roachprod
+
+If [this PR](https://github.com/cockroachdb/cockroach/pull/40801) hasn't been merged yet, you'll need to build a good version of `roachprod` if you want to use this tool with any `n2-` class machines on GCP.
+
+Go to your `cockroachdb/cockroach` dir.
+
+Get the PR with the fix for `n2-` class GCP machines:
+
+```
+git fetch origin pull/40801/head:roachprod-gcp-n2-sdd-count-fix
+```
+
+Make `roachprod`:
+
+```
+make bin/roachprod
+```
+
+**NOTE**: You must be using this version of `roachprod`, which you can vet is the case with `which roachprod`. If this _isn't_ the version you're using, you should add `$GOPATH/src/github.com/cockroachdb/cockroach/bin` to your `$PATH`.
+
 # Microbenchmarks
 
 ## Run on GCP & AWS
