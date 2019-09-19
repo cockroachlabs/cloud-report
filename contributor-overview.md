@@ -33,6 +33,10 @@ It heavily relies on shelling out to bash scripts.
 
 I wanted to parallelize the execution of all of the `roachprod`-compatible runs, but I wanted to keep the high-fidelity logging I had for individual runs. To handle this, everything logs to some individual file that gets instantiated in one of the `<platform>Run()` functions. I'm sure there's a better way to do this, but it was the path of least resistance at the time.
 
+**Why can't I successfully build `n2-` class machines in GCP?**
+
+See [roachprod: Add provisioning of GCP n2-class machines w/ local SSDs](https://github.com/cockroachdb/cockroach/pull/40801). Once that's merged, your `roachprod` builds need to include this commit.
+
 # TOC
 
 - `README.md`: High-level overview.
