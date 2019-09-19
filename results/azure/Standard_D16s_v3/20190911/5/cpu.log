@@ -1,0 +1,5 @@
+stress-ng: info:  [36874] dispatching hogs: 16 cpu
+stress-ng: info:  [36874] successful run completed in 60.08s (1 min, 0.08 secs)
+stress-ng: info:  [36874] stressor       bogo ops real time  usr time  sys time   bogo ops/s   bogo ops/s
+stress-ng: info:  [36874]                           (secs)    (secs)    (secs)   (real time) (usr+sys time)
+stress-ng: info:  [36874] cpu              105317     60.02    709.80      0.34      1754.62       148.30

@@ -1,0 +1,6 @@
+stress-ng: info:  [5224] dispatching hogs: 16 cpu
+stress-ng: info:  [5224] cache allocate: default cache size: 56320K
+stress-ng: info:  [5224] successful run completed in 60.03s (1 min, 0.03 secs)
+stress-ng: info:  [5224] stressor      bogo ops real time  usr time  sys time   bogo ops/s   bogo ops/s
+stress-ng: info:  [5224]                          (secs)    (secs)    (secs)   (real time) (usr+sys time)
+stress-ng: info:  [5224] cpu             157130     60.01    960.01      0.00      2618.43       163.68
