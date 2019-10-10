@@ -24,6 +24,7 @@ var ioOnly = flag.Bool("io-only", false, "only run the IO tests.")
 var loadOnly = flag.Bool("load-only", false, "load the scripts but do not run the benchmarks.")
 var iterations = flag.Int("iterations", 1, "run the benchmarks on the same machines {iterations} number of times.")
 var cloudDetailsFile = flag.String("cloudDetails", "./cloudDetails/default.json", "run tests against specified input, which will be loaded into clouds")
+var crlUsername = flag.String("u", "", "CRL username, if different from `whoami`")
 
 var runAzure = flag.Bool("azure", false, "run microbenchmarks on Azure VMs you've already provisioned.")
 var runOnPrem = flag.Bool("on-prem", false, "run microbenchmarks on arbitrary VMs you've already provisioned.")
@@ -164,7 +165,6 @@ type CloudDetails struct {
 
 // runCmd is a convenience function around exec.Command.
 func runCmd(f *os.File, name string, arg ...string) (stdoutStr string) {
-
 	// 45 minutes is the longest any test runs (io) plus a few extra
 	// minutes as a buffer.
 	ctx, cancel := context.WithTimeout(context.Background(), 45*time.Minute)
@@ -582,7 +582,7 @@ func main() {
 		log.Fatal("Install pcregrep in your $PATH (brew install pcre)")
 	}
 
-	username := runCmdReturnString(nil, "echo", "$CRL_USERNAME")
+	username := *crlUsername
 
 	if username == "" {
 		username = runCmdReturnString(nil, "whoami")

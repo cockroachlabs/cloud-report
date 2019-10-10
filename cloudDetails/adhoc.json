@@ -1,8 +1,0 @@
-[
-  {
-    "name": "gcp",
-    "machineTypes": [
-      "n2-standard-16"
-    ]
-  }
-]
