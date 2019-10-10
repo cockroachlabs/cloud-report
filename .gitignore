@@ -6,3 +6,4 @@ logs/gcp/*
 results/on-prem/*
 credentials.json
 token.json
+cloudDetails/adhoc.json
