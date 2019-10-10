@@ -401,6 +401,18 @@ func uploadResults(f *os.File, dir string) {
 	fmt.Fprintf(f, "Uploaded results\n")
 }
 
+// Some machine types are not available in the 4xlarge size. Add this option to
+// machine sizes that are not 4xlarge. Note, that the machine still needs
+// to support the specified options.
+// For more information see: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-optimize-cpu.html#instance-specify-cpu-options
+func getCpuOptions(machineType string) (awsCpuOptions string) {
+	size := strings.Split(machineType, ".")[1]
+	if size != "4xlarge" {
+		awsCpuOptions = "--aws-cpu-options=CoreCount=8,ThreadsPerCore=2"
+	}
+	return
+}
+
 // roachprodRun creates a roachprod cluster, and then fully executes the benchmark suite.
 func roachprodRun(cloudName, clusterPrefix, machineType string, ebs bool) {
 	dateString := time.Now().Format("20060102")
@@ -422,9 +434,9 @@ func roachprodRun(cloudName, clusterPrefix, machineType string, ebs bool) {
 			runCmd(os.Stdout, "roachprod", "create", clusterName, "-n", "2", "--gce-machine-type", machineType, "--gce-zones", "us-central1-a")
 		case "aws":
 			if ebs {
-				runCmd(os.Stdout, "roachprod", "create", clusterName, "-n", "2", "--clouds", "aws", "--aws-machine-type", machineType, "--local-ssd=false", "--aws-ebs-volume-type", "io1", "--aws-ebs-iops", "20000")
+				runCmd(os.Stdout, "roachprod", "create", clusterName, "-n", "2", "--clouds", "aws", getCpuOptions(machineType), "--aws-machine-type", machineType, "--local-ssd=false", "--aws-ebs-volume-type", "io1", "--aws-ebs-iops", "20000")
 			} else {
-				runCmd(os.Stdout, "roachprod", "create", clusterName, "-n", "2", "--clouds", "aws", "--aws-machine-type-ssd", machineType)
+				runCmd(os.Stdout, "roachprod", "create", clusterName, "-n", "2", "--clouds", "aws", getCpuOptions(machineType), "--aws-machine-type-ssd", machineType)
 			}
 		default:
 			log.Fatalf("Unsupported cloud option: %s", cloudName)
