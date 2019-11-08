@@ -26,6 +26,7 @@ var iterations = flag.Int("iterations", 1, "run the benchmarks on the same machi
 var cloudDetailsFile = flag.String("cloudDetails", "./cloudDetails/default.json", "run tests against specified input, which will be loaded into clouds")
 var crlUsername = flag.String("u", "", "CRL username, if different from `whoami`")
 
+// TODO(pbardea): After better testing with Azure + roachprod, this can probably be removed.
 var runAzure = flag.Bool("azure", false, "run microbenchmarks on Azure VMs you've already provisioned.")
 var runOnPrem = flag.Bool("on-prem", false, "run microbenchmarks on arbitrary VMs you've already provisioned.")
 var machineName = flag.String("machine-name", "", "The name of the machine; used to track results for on-prem runs")
@@ -405,12 +406,13 @@ func uploadResults(f *os.File, dir string) {
 // machine sizes that are not 4xlarge. Note, that the machine still needs
 // to support the specified options.
 // For more information see: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-optimize-cpu.html#instance-specify-cpu-options
-func getCpuOptions(machineType string) (awsCpuOptions string) {
+func getCpuOptions(machineType string) string {
+	var awsCpuOptions string
 	size := strings.Split(machineType, ".")[1]
 	if size != "4xlarge" {
 		awsCpuOptions = "--aws-cpu-options=CoreCount=8,ThreadsPerCore=2"
 	}
-	return
+	return awsCpuOptions
 }
 
 // roachprodRun creates a roachprod cluster, and then fully executes the benchmark suite.
@@ -429,25 +431,27 @@ func roachprodRun(cloudName, clusterPrefix, machineType string, ebs bool) {
 		fmt.Printf("Creating new cluster...\n")
 		// Create two machines with specified options (cloud, machine type, disk type for AWS)
 		// using the steps outlined in `/deployment-steps.md`.
-		// Cluster size hard coded to 2 for now.
-		args := []string{"create", clusterName, "-n", "2"}
+		clusterSize := 2
+		args := []string{"create", clusterName, "-n", strconv.Itoa(clusterSize)}
 		switch cloudName {
 		case "gcp":
 			args = append(args, "--gce-machine-type", machineType, "--gce-zones", "us-central1-a")
 		case "aws":
-			args = append(args, "--clouds", "aws")
-			if ebs {
-				args = append(args, "--aws-machine-type", machineType, "aws", "--local-ssd=false",  "--aws-ebs-volume-type", "io1", "--aws-ebs-iops", "20000")
-				runCmd(os.Stdout, "roachprod", "create", clusterName, "-n", "2", "--clouds", "aws", getCpuOptions(machineType), "--aws-machine-type", machineType, "--local-ssd=false",)
-			} else {
-				args = append(args, "--aws-machine-type-ssd", machineType, "aws")
+			args = append(args, "--clouds=aws")
+			if getCpuOptions(machineType) != "" {
+				args = append(args, getCpuOptions(machineType))
 			}
-			args = append(args, getCpuOptions(machineType))
+			if ebs {
+				args = append(args, "--aws-machine-type", machineType, "--local-ssd=false", "--aws-ebs-volume-type=io1", "--aws-ebs-iops=20000")
+			} else {
+				args = append(args, "--aws-machine-type-ssd", machineType)
+			}
 		case "azure":
-			args = append(args, "--clouds", "azure", "--azure-machine-type", machineType, "--azure-locations")
+			args = append(args, "--clouds=azure", "--azure-machine-type", machineType)
 		default:
 			log.Fatalf("Unsupported cloud option: %s", cloudName)
 		}
+		runCmd(os.Stdout, "roachprod", args...)
 		fmt.Println("Created cluster")
 	}
 
@@ -595,9 +599,10 @@ func main() {
 		log.Fatal("Iterations must be > 0")
 	}
 
+	// Require pcregrep to parse output files.
 	_, err := exec.LookPath("pcregrep")
 	if err != nil {
-		log.Fatal("Install pcregrep in your $PATH (brew install pcre)")
+		log.Fatal("Install pcregrep in your $PATH (brew install pcre) to parse results")
 	}
 
 	username := *crlUsername
@@ -612,7 +617,9 @@ func main() {
 	}
 
 	// Force login check before running any tests.
-	_ = getSheetsClient()
+	// TODO(pbardea): Put all google sheets stuff under a flag.
+	// disabling for now.
+	// _ = getSheetsClient()
 
 	if *runAzure {
 		azureRun(username)
@@ -650,7 +657,6 @@ func main() {
 	wg.Add(totalTests)
 
 	for _, cloud := range clouds {
-
 		for _, machineType := range cloud.MachineTypes {
 			go func(cloudName, machineType string) {
 				defer wg.Done()
