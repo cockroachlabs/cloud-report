@@ -52,5 +52,9 @@ if [ $TEST_FILES_COUNT -ne 64 ]; then
     sudo chown -R $USER /mnt/data1
     sudo chmod -R 775 /mnt/data1
     cd /mnt/data1
-    sysbench fileio --file-total-size=8G --file-num=64 prepare &> /mnt/data1/io-load-results.log
+    LIMIT=$((500*1024*1024))
+    sudo cgcreate -g memory:group1
+    sudo cgset -r memory.limit_in_bytes=$LIMIT group1
+    sudo cgset -r  memory.memsw.limit_in_bytes=$LIMIT group1
+    sudo cgexec -g memory:group1 sysbench fileio --file-total-size=80G --file-num=64 prepare &> /mnt/data1/io-load-results.log
 fi

@@ -14,3 +14,4 @@ iperf --client="$SERVER" --len=128k --interval=1 --time=60 &> network-iperf-clie
 if [ $? -ne 0 ]; then
     exit 1
 fi
+sleep 15
