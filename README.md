@@ -38,5 +38,5 @@ When Azure is baked into `roachprod`, one might be able to simply add `azure` to
 **Nathan VanBenschoten** for Engineering
 - Technical oversight and insight
 
-**Sean Loiselle** for Product Marketing
+**Paul Bardea** for Engineering
 - Data collection and aggregation
