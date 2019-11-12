@@ -23,6 +23,6 @@ cd /mnt/data1
 > /mnt/data1/io-rd-results.log
 
 # Set memory to 50 Megabytes
-for each in 1 4 8 16 32 64 112; do sudo cgexec -g memory:group1 sysbench fileio --file-total-size=80G --file-test-mode=rndrd --time=240 --max-requests=0 --file-block-size=32K --file-num=64 --file-fsync-all --threads=$each run; sleep 10;
+for each in 1 4 8 16 32 64; do sudo cgexec -g memory:group1 sysbench fileio --file-total-size=80G --file-test-mode=rndrd --time=240 --max-requests=0 --file-block-size=32K --file-num=64 --file-fsync-all --threads=$each run; sleep 10;
 done &>> /mnt/data1/io-rd-results.log
 
