@@ -25,7 +25,7 @@ echo "$TEST_FILES_COUNT"
 if [ $TEST_FILES_COUNT -ne 64 ]; then
     curl -s https://packagecloud.io/install/repositories/akopytov/sysbench/script.deb.sh | sudo bash
 
-    sudo apt-get -y install sysbench make automake libtool pkg-config libaio-dev libmysqlclient-dev libssl-dev libpq-dev
+    sudo apt-get -y install sysbench make automake libtool pkg-config libaio-dev libmysqlclient-dev libssl-dev libpq-dev cgroup-tools
 
     if [ "$CLOUD" == "gcp" ]
     then
