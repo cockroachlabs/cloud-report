@@ -243,6 +243,7 @@ func isIPWellFormed(ipString string) bool {
 type platformRunner struct {
 	clusterName string
 	clusterSize int
+	nodeIDToNameMap map[int]string
 	upload   func(f *os.File, dest, file string)
 	exec     func(f *os.File, src, cmd string)
 	download func(f *os.File, src, file, path string)
@@ -501,6 +502,71 @@ func azureLocationForMachineType(machineType string) string {
 	return "eastus2"
 }
 
+// onPremRun runs on pre-provisioned VMs, but does not rely on any
+// platform-specific features.
+func onPremRun(username string) {
+	if *node1IP == "" || *node2IP == "" {
+		log.Fatal("Must pass in -node1 and -node2 IP addresses.")
+	}
+
+	if !isIPWellFormed(*node1IP) || !isIPWellFormed(*node2IP) {
+		log.Fatal("-node1 or -node2 is invalid IP address")
+	}
+
+	node1 := fmt.Sprintf("%s@%s", username, *node1IP)
+	node2 := fmt.Sprintf("%s@%s", username, *node2IP)
+
+	nodeIDtoHostname := map[int]string{
+		1: node1,
+		2: node2,
+	}
+
+	dateString := time.Now().Format("20060102")
+
+	var initLogPath, runLogPath, resultsDir string
+
+	if *machineName == "" {
+		initLogPath = fmt.Sprintf("logs/%s/%s/init/", *node1IP, dateString)
+		runLogPath = fmt.Sprintf("logs/%s/%s/run/", *node1IP, dateString)
+		resultsDir = *node1IP
+	} else {
+		initLogPath = fmt.Sprintf("logs/%s/%s/init/", *machineName, dateString)
+		runLogPath = fmt.Sprintf("logs/%s/%s/init/", *machineName, dateString)
+		resultsDir = *machineName
+	}
+
+	initWriter := newLogFile(initLogPath, "init.log")
+
+	// TODO(pbardea): This is a hack for on prem.
+	shellRunner.nodeIDToNameMap = nodeIDtoHostname
+	shellRunner.init(initWriter)
+
+	argVals := map[string]string{
+		argCloudName: "on-prem",
+	}
+
+	if *node2InternalIP == "" {
+		argVals[argNode2InternalIP] = runCmdReturnString(initWriter, "ssh", node2, "./scripts/on-prem/get-internal-ip.sh")
+
+		if !isIPWellFormed(argVals[argNode2InternalIP]) {
+			log.Fatal("Cannot automatically detect node 2 internal IP; please run again with -node2-internal=<node2's internal IP address>")
+		}
+		fmt.Fprintf(initWriter, "Node 2 internal IP address detected as %s", argVals[argNode2InternalIP])
+
+	} else {
+		argVals[argNode2InternalIP] = *node2InternalIP
+	}
+
+	for i := 0; i < *iterations; i++ {
+		// newLogFile does some very, very small amount of magic to generate a new directory
+		// each time it's called, so you want to call it for each run.
+		runLog := newLogFile(runLogPath, "run.log")
+		resultsPath := createDir(runLog, "on-prem", resultsDir)
+		shellRunner.run(runLog, argVals, resultsPath)
+		fmt.Fprintf(runLog, "\n%d/%d iterations completed\n", i+1, *iterations)
+	}
+}
+
 func main() {
 	flag.Parse()
 
@@ -520,7 +586,10 @@ func main() {
 		username = runCmdReturnString(nil, "whoami")
 	}
 
-	// TODO(pbardea): Disabling on prem runs for now during refactor.
+	if *runOnPrem {
+		onPremRun(username)
+		return
+	}
 
 	// Force login check before running any tests.
 	// TODO(pbardea): Put all google sheets stuff under a flag.
@@ -579,6 +648,9 @@ func main() {
 }
 
 func (p platformRunner) nodeIDToHostname(nodeID int) string {
+	if p.nodeIDToNameMap != nil {
+		return p.nodeIDToNameMap[nodeID]
+	}
 	if nodeID > p.clusterSize {
 		log.Fatalf("Trying to access a node with ID %d, but only %d nodes exist", nodeID, p.clusterName)
 	}
