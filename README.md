@@ -8,10 +8,6 @@ This repo will let us aggregate and share data among team members, including pro
 
 [Project plan doc](https://docs.google.com/document/d/195l-Opbq_Pd3hHqRM5ynUa4FOtyGJqCriUYfqji38VI/edit)
 
-## Results
-
-You can view the raw results of these tests in the `results` directory of this repo, or in [a spreadsheet where results are automatically tracked](https://docs.google.com/spreadsheets/d/175Q3g3Ti40rEmaCMwm0CBXRnHIo07WSBsxOVhmqNyEY).
-
 ## Enclosed Binary
 
 The go program contained in this repo can automatically run tests on cloud providers baked into Roachprod, as well as Microsoft Azure.
