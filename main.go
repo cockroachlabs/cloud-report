@@ -429,15 +429,22 @@ func roachprodRun(cloudName, clusterPrefix, machineType string, ebs bool) {
 		fmt.Printf("Creating new cluster...\n")
 		// Create two machines with specified options (cloud, machine type, disk type for AWS)
 		// using the steps outlined in `/deployment-steps.md`.
+		// Cluster size hard coded to 2 for now.
+		args := []string{"create", clusterName, "-n", "2"}
 		switch cloudName {
 		case "gcp":
-			runCmd(os.Stdout, "roachprod", "create", clusterName, "-n", "2", "--gce-machine-type", machineType, "--gce-zones", "us-central1-a")
+			args = append(args, "--gce-machine-type", machineType, "--gce-zones", "us-central1-a")
 		case "aws":
+			args = append(args, "--clouds", "aws")
 			if ebs {
-				runCmd(os.Stdout, "roachprod", "create", clusterName, "-n", "2", "--clouds", "aws", getCpuOptions(machineType), "--aws-machine-type", machineType, "--local-ssd=false", "--aws-ebs-volume-type", "io1", "--aws-ebs-iops", "20000")
+				args = append(args, "--aws-machine-type", machineType, "aws", "--local-ssd=false",  "--aws-ebs-volume-type", "io1", "--aws-ebs-iops", "20000")
+				runCmd(os.Stdout, "roachprod", "create", clusterName, "-n", "2", "--clouds", "aws", getCpuOptions(machineType), "--aws-machine-type", machineType, "--local-ssd=false",)
 			} else {
-				runCmd(os.Stdout, "roachprod", "create", clusterName, "-n", "2", "--clouds", "aws", getCpuOptions(machineType), "--aws-machine-type-ssd", machineType)
+				args = append(args, "--aws-machine-type-ssd", machineType, "aws")
 			}
+			args = append(args, getCpuOptions(machineType))
+		case "azure":
+			args = append(args, "--clouds", "azure", "--azure-machine-type", machineType, "--azure-locations")
 		default:
 			log.Fatalf("Unsupported cloud option: %s", cloudName)
 		}
@@ -582,7 +589,6 @@ func onPremRun(username string) {
 }
 
 func main() {
-
 	flag.Parse()
 
 	if *iterations < 1 {
