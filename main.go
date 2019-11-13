@@ -26,6 +26,7 @@ var iterations = flag.Int("iterations", 1, "run the benchmarks on the same machi
 var cloudDetailsFile = flag.String("cloudDetails", "./cloudDetails/default.json", "run tests against specified input, which will be loaded into clouds")
 var crlUsername = flag.String("u", "", "CRL username, if different from `whoami`")
 
+// TODO(pbardea): After better testing with Azure + roachprod, this can probably be removed.
 var runAzure = flag.Bool("azure", false, "run microbenchmarks on Azure VMs you've already provisioned.")
 var runOnPrem = flag.Bool("on-prem", false, "run microbenchmarks on arbitrary VMs you've already provisioned.")
 var machineName = flag.String("machine-name", "", "The name of the machine; used to track results for on-prem runs")
@@ -240,6 +241,8 @@ func isIPWellFormed(ipString string) bool {
 // platformRunner lets you describe methods that allow arbitrary platforms
 // upload, run, and download files.
 type platformRunner struct {
+	clusterName string
+	clusterSize int
 	upload   func(f *os.File, dest, file string)
 	exec     func(f *os.File, src, cmd string)
 	download func(f *os.File, src, file, path string)
@@ -298,11 +301,12 @@ func newLogFile(path, filename string) *os.File {
 
 // init prepares the given machines to execute the benchmarks contained
 // in the directory.
-func (p platformRunner) init(f *os.File, nodeIDtoHostname map[int]string) {
-	if len(nodeIDtoHostname) != 2 {
-		fmt.Fprintf(f, "Requires 2 nodes\n")
-		runtime.Goexit()
-	}
+func (p platformRunner) init(f *os.File) {
+	//if clusterSize != 2 {
+	//	fmt.Fprintf(f, "Requires 2 nodes\n")
+	//	runtime.Goexit()
+	//}
+	// TODO(pbardea): Check that enough nodes exist in the cluster.
 	if _, err := os.Stat("./init.sh"); os.IsNotExist(err) {
 		fmt.Fprintf(f, "./init.sh not present\n")
 		runtime.Goexit()
@@ -315,7 +319,8 @@ func (p platformRunner) init(f *os.File, nodeIDtoHostname map[int]string) {
 	runCmd(f, "zip", "-FSro", "./scripts.zip", "./scripts")
 
 	fmt.Fprintf(f, "Putting and prepping scripts...\n")
-	for _, dest := range nodeIDtoHostname {
+	for nodeID := 1; nodeID < p.clusterSize; nodeID++ {
+		dest := p.nodeIDToHostname(nodeID)
 		p.upload(f, dest, "scripts.zip")
 		p.upload(f, dest, "init.sh")
 		p.exec(f, dest, "chmod a+x init.sh")
@@ -328,7 +333,6 @@ func (p platformRunner) init(f *os.File, nodeIDtoHostname map[int]string) {
 func (p platformRunner) run(
 	f *os.File,
 	argVals map[string]string,
-	nodeIDtoHostname map[int]string,
 	resultsPath string,
 ) {
 	if *loadOnly {
@@ -354,10 +358,7 @@ func (p platformRunner) run(
 			if r.name != "" {
 				fmt.Fprintf(f, "\tRunning %s...\n", r.name)
 			}
-			src, ok := nodeIDtoHostname[r.node]
-			if !ok {
-				log.Fatalf("%s: Invalid node number %d in routine %s; should be either 1 or 2\n", resultsPath, r.node, r.name)
-			}
+			src := p.nodeIDToHostname(r.node)
 			cmd := fmt.Sprintf("%s %s", r.file, argVals[r.arg])
 			if r.launchAsGoroutine {
 				go p.exec(f, src, cmd)
@@ -367,7 +368,7 @@ func (p platformRunner) run(
 		}
 		fmt.Fprintf(f, "Downloading artifacts for %s...\n", b.name)
 		for _, art := range b.artifacts {
-			p.download(f, nodeIDtoHostname[art.node], art.file, resultsPath)
+			p.download(f, p.nodeIDToHostname(art.node), art.file, resultsPath)
 		}
 		fmt.Fprintf(f, "Downloaded artifacts for %s\n", b.name)
 		fmt.Fprintf(f, "Finished %s\n", b.name)
@@ -390,68 +391,41 @@ func convertArtifactFilenameToCSV(filename string) string {
 // uploadResults posts the CSVs in dir to Google sheets.
 func uploadResults(f *os.File, dir string) {
 	parseResults(f, dir)
-	fmt.Fprintf(f, "Uploading results in %s...\n", dir)
-	for _, b := range benchmarks {
-		for _, a := range b.artifacts {
-			fn := convertArtifactFilenameToCSV(a.file)
-			appendDataToSpreadsheet(fn, dir)
-		}
-	}
-	appendDataToSpreadsheet("/run-data.csv", dir)
-	fmt.Fprintf(f, "Uploaded results\n")
+	//fmt.Fprintf(f, "Uploading results in %s...\n", dir)
+	//for _, b := range benchmarks {
+	//	for _, a := range b.artifacts {
+	//		fn := convertArtifactFilenameToCSV(a.file)
+	//		appendDataToSpreadsheet(fn, dir)
+	//	}
+	//}
+	//appendDataToSpreadsheet("/run-data.csv", dir)
+	//fmt.Fprintf(f, "Uploaded results\n")
 }
 
 // Some machine types are not available in the 4xlarge size. Add this option to
 // machine sizes that are not 4xlarge. Note, that the machine still needs
 // to support the specified options.
 // For more information see: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-optimize-cpu.html#instance-specify-cpu-options
-func getCpuOptions(machineType string) (awsCpuOptions string) {
+// TODO(pbardea): Will error on Azure machine types.
+func getCpuOptions(machineType string) string {
+	var awsCpuOptions string
 	size := strings.Split(machineType, ".")[1]
 	if size != "4xlarge" {
 		awsCpuOptions = "--aws-cpu-options=CoreCount=8,ThreadsPerCore=2"
 	}
-	return
+	return awsCpuOptions
 }
 
 // roachprodRun creates a roachprod cluster, and then fully executes the benchmark suite.
 func roachprodRun(cloudName, clusterPrefix, machineType string, ebs bool) {
-	dateString := time.Now().Format("20060102")
-	clusterName := fmt.Sprintf("%s-%s-%s-%s", clusterPrefix, cloudName, dateString, machineType)
+	dateString, clusterName, clusterSize := createCluster(clusterPrefix, cloudName, machineType, ebs)
 
-	// Roachprod cluster names cannot contain dots; convert all of them to dashes.
-	validClusterName := regexp.MustCompile(`[\.]`)
-	clusterName = validClusterName.ReplaceAllString(clusterName, "-")
-
-	fmt.Printf("\nChecking for existing cluster %s...\n", clusterName)
-	if runCmdFindString(os.Stdout, clusterName, "roachprod", "list") {
-		fmt.Println("Found existing cluster")
-	} else {
-		fmt.Printf("Creating new cluster...\n")
-		// Create two machines with specified options (cloud, machine type, disk type for AWS)
-		// using the steps outlined in `/deployment-steps.md`.
-		switch cloudName {
-		case "gcp":
-			runCmd(os.Stdout, "roachprod", "create", clusterName, "-n", "2", "--gce-machine-type", machineType, "--gce-zones", "us-central1-a")
-		case "aws":
-			if ebs {
-				runCmd(os.Stdout, "roachprod", "create", clusterName, "-n", "2", "--clouds", "aws", getCpuOptions(machineType), "--aws-machine-type", machineType, "--local-ssd=false", "--aws-ebs-volume-type", "io1", "--aws-ebs-iops", "20000")
-			} else {
-				runCmd(os.Stdout, "roachprod", "create", clusterName, "-n", "2", "--clouds", "aws", getCpuOptions(machineType), "--aws-machine-type-ssd", machineType)
-			}
-		default:
-			log.Fatalf("Unsupported cloud option: %s", cloudName)
-		}
-		fmt.Println("Created cluster")
-	}
-
-	nodeIDtoHostname := map[int]string{
-		1: clusterName + ":1",
-		2: clusterName + ":2",
-	}
 	initlogPath := fmt.Sprintf("logs/%s/%s/%s/init", cloudName, machineType, dateString)
 	initLog := newLogFile(initlogPath, "init.log")
 	fmt.Printf("%s init log in %s\n", clusterName, initlogPath)
-	roachprodRunner.init(initLog, nodeIDtoHostname)
+	roachprodRunner.clusterName = clusterName
+	roachprodRunner.clusterSize = clusterSize
+	roachprodRunner.init(initLog)
 	argVals := map[string]string{
 		argCloudName:       cloudName,
 		argNode2InternalIP: runCmdReturnString(initLog, "roachprod", "ip", clusterName+":2"),
@@ -465,133 +439,79 @@ func roachprodRun(cloudName, clusterPrefix, machineType string, ebs bool) {
 		runLog := newLogFile(runLogPath, "run.log")
 		fmt.Printf("%s run log now in %s\n", clusterName, runLogPath)
 		resultsPath := createDir(runLog, cloudName, machineType)
-		roachprodRunner.run(runLog, argVals, nodeIDtoHostname, resultsPath)
+		roachprodRunner.run(runLog, argVals, resultsPath)
 
 		uploadResults(runLog, resultsPath)
 	}
 }
 
-// azureRun runs the benchmark suite on the provided machines.
-// NOTE: azureRun is not a generic interface because it relies
-// on an Azure-specific endpoint to get metadata about the machine.
-func azureRun(username string) {
-	if *node1IP == "" || *node2IP == "" {
-		log.Fatal("Must pass in -node1 and -node2 IP addresses.")
-	}
-
-	if !isIPWellFormed(*node1IP) || !isIPWellFormed(*node2IP) {
-		log.Fatal("-node1 or -node2 is invalid IP address")
-	}
-
-	node1 := fmt.Sprintf("%s@%s", username, *node1IP)
-	node2 := fmt.Sprintf("%s@%s", username, *node2IP)
-
-	nodeIDtoHostname := map[int]string{
-		1: node1,
-		2: node2,
-	}
-
+func createCluster(clusterPrefix string, cloudName string, machineType string, ebs bool) (string, string, int) {
 	dateString := time.Now().Format("20060102")
-
-	initLog := newLogFile(fmt.Sprintf("logs/azure/%s/%s/init/", *node1IP, dateString), "init.log")
-
-	shellRunner.init(initLog, nodeIDtoHostname)
-
-	argVals := map[string]string{
-		argCloudName:       "azure",
-		argNode2InternalIP: runCmdReturnString(initLog, "ssh", node2, "./scripts/azure/get-internal-ip.sh"),
-	}
-
-	machineType := runCmdReturnString(initLog, "ssh", node1, "./scripts/azure/get-vm-type.sh")
-
-	runLogPath := fmt.Sprintf("logs/azure/%s/%s/run/", *node1IP, dateString)
-
-	for i := 0; i < *iterations; i++ {
-		// newLogFile does some very, very small amount of magic to generate a new directory
-		// each time it's called, so you want to call it for each run.
-		runLog := newLogFile(runLogPath, "run.log")
-		resultsPath := createDir(runLog, "azure", machineType)
-		shellRunner.run(runLog, argVals, nodeIDtoHostname, resultsPath)
-
-		uploadResults(runLog, resultsPath)
-	}
-}
-
-// onPremRun runs on pre-provisioned VMs, but does not rely on any
-// platform-specific features.
-func onPremRun(username string) {
-	if *node1IP == "" || *node2IP == "" {
-		log.Fatal("Must pass in -node1 and -node2 IP addresses.")
-	}
-
-	if !isIPWellFormed(*node1IP) || !isIPWellFormed(*node2IP) {
-		log.Fatal("-node1 or -node2 is invalid IP address")
-	}
-
-	node1 := fmt.Sprintf("%s@%s", username, *node1IP)
-	node2 := fmt.Sprintf("%s@%s", username, *node2IP)
-
-	nodeIDtoHostname := map[int]string{
-		1: node1,
-		2: node2,
-	}
-
-	dateString := time.Now().Format("20060102")
-
-	var initLogPath, runLogPath, resultsDir string
-
-	if *machineName == "" {
-		initLogPath = fmt.Sprintf("logs/%s/%s/init/", *node1IP, dateString)
-		runLogPath = fmt.Sprintf("logs/%s/%s/run/", *node1IP, dateString)
-		resultsDir = *node1IP
+	clusterName := fmt.Sprintf("%s-%s-%s-%s", clusterPrefix, cloudName, dateString, machineType)
+	// Roachprod cluster names cannot contain dots or underscores; convert all of them to dashes.
+	validClusterName := regexp.MustCompile(`[\.|\_]`)
+	clusterName = validClusterName.ReplaceAllString(clusterName, "-")
+	clusterSize := 2
+	fmt.Printf("\nChecking for existing cluster %s...\n", clusterName)
+	if runCmdFindString(os.Stdout, clusterName, "roachprod", "list") {
+		fmt.Println("Found existing cluster")
 	} else {
-		initLogPath = fmt.Sprintf("logs/%s/%s/init/", *machineName, dateString)
-		runLogPath = fmt.Sprintf("logs/%s/%s/init/", *machineName, dateString)
-		resultsDir = *machineName
-	}
-
-	initWriter := newLogFile(initLogPath, "init.log")
-
-	shellRunner.init(initWriter, nodeIDtoHostname)
-
-	argVals := map[string]string{
-		argCloudName: "on-prem",
-	}
-
-	if *node2InternalIP == "" {
-		argVals[argNode2InternalIP] = runCmdReturnString(initWriter, "ssh", node2, "./scripts/on-prem/get-internal-ip.sh")
-
-		if !isIPWellFormed(argVals[argNode2InternalIP]) {
-			log.Fatal("Cannot automatically detect node 2 internal IP; please run again with -node2-internal=<node2's internal IP address>")
+		fmt.Printf("Creating new cluster...\n")
+		// Create two machines with specified options (cloud, machine type, disk type for AWS)
+		// using the steps outlined in `/deployment-steps.md`.
+		args := []string{"create", clusterName, "-n", strconv.Itoa(clusterSize)}
+		switch cloudName {
+		case "gcp":
+			args = append(args, "--gce-machine-type", machineType, "--gce-zones", "us-central1-a")
+		case "aws":
+			args = append(args, "--clouds=aws")
+			if getCpuOptions(machineType) != "" {
+				args = append(args, getCpuOptions(machineType))
+			}
+			if ebs {
+				args = append(args, "--aws-machine-type", machineType, "--local-ssd=false", "--aws-ebs-volume-type=io1", "--aws-ebs-iops=20000")
+			} else {
+				args = append(args, "--aws-machine-type-ssd", machineType)
+			}
+		case "azure":
+			args = append(args, "--clouds=azure", "--azure-machine-type", machineType, "--azure-locations", azureLocationForMachineType(machineType))
+		default:
+			log.Fatalf("Unsupported cloud option: %s", cloudName)
 		}
-
-		fmt.Fprintf(initWriter, "Node 2 internal IP address detected as %s", argVals[argNode2InternalIP])
-
-	} else {
-		argVals[argNode2InternalIP] = *node2InternalIP
+		runCmd(os.Stdout, "roachprod", args...)
+		fmt.Println("Created cluster")
 	}
+	return dateString, clusterName, clusterSize
+}
 
-	for i := 0; i < *iterations; i++ {
-		// newLogFile does some very, very small amount of magic to generate a new directory
-		// each time it's called, so you want to call it for each run.
-		runLog := newLogFile(runLogPath, "run.log")
-		resultsPath := createDir(runLog, "on-prem", resultsDir)
-		shellRunner.run(runLog, argVals, nodeIDtoHostname, resultsPath)
-		fmt.Fprintf(runLog, "\n%d/%d iterations completed\n", i+1, *iterations)
+func azureLocationForMachineType(machineType string) string {
+	locationsByMachine := map[string]string{
+		"Standard_DS5_v2": "eastus",
+		"Standard_D16s_v3": "eastus",
+		"Standard_DS14": "eastus",
+		"Standard_E16s_v3": "eastus2",
+		"Standard_F16s_v2": "eastus",
+		"Standard_GS4": "eastus2",
+		"Standard_H16r": "eastus",
 	}
+	location, ok := locationsByMachine[machineType]
+	if ok {
+		return location
+	}
+	return "eastus2"
 }
 
 func main() {
-
 	flag.Parse()
 
 	if *iterations < 1 {
 		log.Fatal("Iterations must be > 0")
 	}
 
+	// Require pcregrep to parse output files.
 	_, err := exec.LookPath("pcregrep")
 	if err != nil {
-		log.Fatal("Install pcregrep in your $PATH (brew install pcre)")
+		log.Fatal("Install pcregrep in your $PATH (brew install pcre) to parse results")
 	}
 
 	username := *crlUsername
@@ -600,18 +520,12 @@ func main() {
 		username = runCmdReturnString(nil, "whoami")
 	}
 
-	if *runOnPrem {
-		onPremRun(username)
-		return
-	}
+	// TODO(pbardea): Disabling on prem runs for now during refactor.
 
 	// Force login check before running any tests.
-	_ = getSheetsClient()
-
-	if *runAzure {
-		azureRun(username)
-		return
-	}
+	// TODO(pbardea): Put all google sheets stuff under a flag.
+	// D google sheets upload for now.
+	// _ = getSheetsClient()
 
 	_, err = exec.LookPath("roachprod")
 	if err != nil {
@@ -644,7 +558,6 @@ func main() {
 	wg.Add(totalTests)
 
 	for _, cloud := range clouds {
-
 		for _, machineType := range cloud.MachineTypes {
 			go func(cloudName, machineType string) {
 				defer wg.Done()
@@ -663,4 +576,11 @@ func main() {
 		}
 	}
 	wg.Wait()
+}
+
+func (p platformRunner) nodeIDToHostname(nodeID int) string {
+	if nodeID > p.clusterSize {
+		log.Fatalf("Trying to access a node with ID %d, but only %d nodes exist", nodeID, p.clusterName)
+	}
+	return p.clusterName + ":" + strconv.Itoa(nodeID)
 }

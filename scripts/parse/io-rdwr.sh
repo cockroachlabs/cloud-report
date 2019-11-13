@@ -27,11 +27,16 @@ if ! [ -f "$IOOPLOGPATH" ]; then
     exit
 fi
 
-echo "uuid,Threads,Read Throughput,Write Througput,Total Time,Latency Min,Latency Avg,Latency Max,Latency 95th Percentile,Latency Sum" > ${IOOPCSVPATH}
+echo "uuid,cloud,machine type,date,runID,Threads,Read Throughput,Write Througput,Total Time,Latency Min,Latency Avg,Latency Max,Latency 95th Percentile,Latency Sum" > ${IOOPCSVPATH}
 
 UUID=$(cat "${DIR}/uuid.txt")
 DATA=$(pcregrep -M -o1 -o2 -o3 -o4 -o5 -o6 -o7 -o8 -o9 --om-separator="," 'Number of threads:\s+(\d+)[\s\S]+?read, MiB/s:\s+(.+?)\n\s+written, MiB/s:\s+(.+?)\n[\s\S]+?total time:\s+(.+?)s\n[\s\S]+?min:\s+(.+?)\n\s+avg:\s+(.+?)\s+max:\s+(.+?)\s+95th percentile:\s+(.+?)\s+sum:\s+(.+?)\n' ${IOOPLOGPATH})
+RUNDATAPATH="${DIR}/run-data.csv"
+DIRASSTRING=${DIR//\// }
+MACHINE_INFO=$(echo "${DIRASSTRING}" | pcregrep --om-separator="," -o1 -o2 -o3 -o4 'results (.+?) (.+?) (.+?) (.+?)' -)
 
 while read -r line; do
-    echo "${UUID},${line}" >> ${IOOPCSVPATH}
+    echo "${UUID},${MACHINE_INFO},${line}" >> ${IOOPCSVPATH}
 done <<< "$DATA"
+
+echo "${UUID},${MACHINE_INFO},${DATA}" >> ${RUNDATAPATH}
