@@ -10,15 +10,12 @@ This repo will let us aggregate and share data among team members, including pro
 
 ## Enclosed Binary
 
-The go program contained in this repo can automatically run tests on cloud providers baked into Roachprod, as well as Microsoft Azure.
+The go program contained in this repo can automatically run tests on cloud providers baked into Roachprod.
 
 For more details, see `reproduction-steps.md` in this repo.
 
 _Note_: It would be possible to extend this binary to run on other platforms relatively easily, but requires some work to handle cloud-specific tasks––namely, getting machine metadata.
 
-## Future Work
-
-When Azure is baked into `roachprod`, one might be able to simply add `azure` to `cloudDetails/default.json` and things will work. At that point you could remove all of the Azure machinery. However, I think that leaving in the `shellRunner` might be nice because it would let us extend this kind of framework into something more like an arbitrary script runner.
 
 ## Staff
 
