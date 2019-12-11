@@ -9,8 +9,8 @@ then
       exit
 fi
 
-IPERFLOGPATH="${DIR}/network-iperf-client.log"
-IPERFCSVPATH="${DIR}/network-iperf-client.csv"
+IPERFLOGPATH="${DIR}/network-iperf-server.log"
+IPERFCSVPATH="${DIR}/network-iperf-server.csv"
 
 if ! [ -f "$IPERFLOGPATH" ]; then
     echo "$IPERFLOGPATH does not exist"
@@ -19,5 +19,7 @@ fi
 
 echo "uuid,Interval,Transfer,Bandwidth" > ${IPERFCSVPATH}
 UUID=$(cat "${DIR}/uuid.txt")
-DATA=$(tail -n 1 ${IPERFLOGPATH} | pcregrep --om-separator="," -o1 -o2 -o3 '\]\s+(.+?)\s+sec\s+(.+?)Bytes\s+(.+? .+?)bits' -)
-echo "${UUID},${DATA}" >> ${IPERFCSVPATH}
+for LINE in 1  2 3; do
+  DATA=$(tail -n ${LINE} ${IPERFLOGPATH} | head -n 1 | pcregrep --om-separator="," -o1 -o2 -o3 '\]\s+(.+?)\s+sec\s+(.+?)Bytes\s+(.+? .+?)bits' -);
+  echo "${UUID},${DATA}" >> ${IPERFCSVPATH}
+done;
