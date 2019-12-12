@@ -6,7 +6,7 @@ In 2018, we produced a "Cloud Report", wherein we assessed the performance of AW
 
 This repo will let us aggregate and share data among team members, including processes and results. 
 
-[Project plan doc](https://docs.google.com/document/d/195l-Opbq_Pd3hHqRM5ynUa4FOtyGJqCriUYfqji38VI/edit)
+
 
 ## Enclosed Binary
 
