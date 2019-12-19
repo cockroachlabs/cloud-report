@@ -16,6 +16,9 @@ For more details, see `reproduction-steps.md` in this repo.
 
 _Note_: It would be possible to extend this binary to run on other platforms relatively easily, but requires some work to handle cloud-specific tasks––namely, getting machine metadata.
 
+## TPC-C Reproduction Steps
+
+[This guide](https://www.cockroachlabs.com/docs/stable/performance-benchmarking-with-tpc-c-1k-warehouses.html) from the CockroachDB docs shows you how to run the TPC-C benchmark on CockroachDB to reproduce the TPC-C results in the report.
 
 ## Staff
 
