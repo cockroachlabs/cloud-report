@@ -22,6 +22,7 @@ import (
 var ioSkip = flag.Bool("io-skip", false, "skip the IO tests, which take a long time to run.")
 var ioOnly = flag.Bool("io-only", false, "only run the IO tests.")
 var iperfOnly = flag.Bool("iperf-only", false, "only run the network throughput tests.")
+var cpuOnly = flag.Bool("cpu-only", false, "only run the cpu tests.")
 var loadOnly = flag.Bool("load-only", false, "load the scripts but do not run the benchmarks.")
 var iterations = flag.Int("iterations", 1, "run the benchmarks on the same machines {iterations} number of times.")
 var cloudDetailsFile = flag.String("cloudDetails", "./cloudDetails/default.json", "run tests against specified input, which will be loaded into clouds")
@@ -113,30 +114,30 @@ var benchmarks = []benchmark{
 		name: "iperf",
 		routines: []benchmarkRoutine{
 			{
-				name: "client",
-				file: "./scripts/gen/network-iperf-client.sh",
-				arg:  argNode2InternalIP,
+				name:              "client",
+				file:              "./scripts/gen/network-iperf-client.sh",
+				arg:               argNode2InternalIP,
 				launchAsGoroutine: true,
-				node: 1,
+				node:              1,
 			},
 			{
-				name: "client",
-				file: "./scripts/gen/network-iperf-client.sh",
-				arg:  argNode2InternalIP,
+				name:              "client",
+				file:              "./scripts/gen/network-iperf-client.sh",
+				arg:               argNode2InternalIP,
 				launchAsGoroutine: true,
-				node: 3,
+				node:              3,
 			},
 			{
-				name: "client",
-				file: "./scripts/gen/network-iperf-client.sh",
-				arg:  argNode2InternalIP,
+				name:              "client",
+				file:              "./scripts/gen/network-iperf-client.sh",
+				arg:               argNode2InternalIP,
 				launchAsGoroutine: true,
-				node: 4,
+				node:              4,
 			},
 			{
-				name:              "server",
-				file:              "./scripts/gen/network-iperf-server.sh",
-				node:              2,
+				name: "server",
+				file: "./scripts/gen/network-iperf-server.sh",
+				node: 2,
 			},
 		},
 		artifacts: []artifact{
@@ -256,12 +257,12 @@ func isIPWellFormed(ipString string) bool {
 // platformRunner lets you describe methods that allow arbitrary platforms
 // upload, run, and download files.
 type platformRunner struct {
-	clusterName string
-	clusterSize int
+	clusterName     string
+	clusterSize     int
 	nodeIDToNameMap map[int]string
-	upload   func(f *os.File, dest, file string)
-	exec     func(f *os.File, src, cmd string)
-	download func(f *os.File, src, file, path string)
+	upload          func(f *os.File, dest, file string)
+	exec            func(f *os.File, src, cmd string)
+	download        func(f *os.File, src, file, path string)
 }
 
 // roachprodRunner relies on the roachprod binary to manage remote
@@ -335,7 +336,7 @@ func (p platformRunner) init(f *os.File) {
 	runCmd(f, "zip", "-FSro", "./scripts.zip", "./scripts")
 
 	fmt.Fprintf(f, "Putting and prepping scripts...\n")
-	for nodeID := 1; nodeID < p.clusterSize + 1; nodeID++ {
+	for nodeID := 1; nodeID < p.clusterSize+1; nodeID++ {
 		dest := p.nodeIDToHostname(nodeID)
 		p.upload(f, dest, "scripts.zip")
 		p.upload(f, dest, "init.sh")
@@ -365,7 +366,7 @@ func (p platformRunner) run(
 	fmt.Fprintf(f, "Running benchmarks for %s\n", resultsPath)
 
 	for _, b := range benchmarks {
-		if (*ioSkip && b.name == "io") || (*ioOnly && b.name != "io") || (*iperfOnly && b.name != "iperf") {
+		if (*ioSkip && b.name == "io") || (*ioOnly && b.name != "io") || (*iperfOnly && b.name != "iperf") || (*cpuOnly && b.name != "cpu") {
 			continue
 		}
 
@@ -502,13 +503,13 @@ func createCluster(clusterPrefix string, cloudName string, machineType string, e
 
 func azureLocationForMachineType(machineType string) string {
 	locationsByMachine := map[string]string{
-		"Standard_DS5_v2": "eastus",
+		"Standard_DS5_v2":  "eastus",
 		"Standard_D16s_v3": "eastus",
-		"Standard_DS14": "eastus",
+		"Standard_DS14":    "eastus",
 		"Standard_E16s_v3": "eastus2",
 		"Standard_F16s_v2": "eastus",
-		"Standard_GS4": "eastus2",
-		"Standard_H16r": "eastus",
+		"Standard_GS4":     "eastus2",
+		"Standard_H16r":    "eastus",
 	}
 	location, ok := locationsByMachine[machineType]
 	if ok {
