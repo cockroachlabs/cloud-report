@@ -61,7 +61,7 @@ make bin/roachprod
 
 To test all machines, run:
 ~~~
-./cloud-report-2019
+./cloud-report-2020
 ~~~
 
 Meaningful flags include:
@@ -85,7 +85,7 @@ As noted above, you can choose some other set of machines to test by specifying 
 2. Run...
 
     ~~~
-    ./cloud-report-2019 -azure -node1 <public IP of node 1> -node2 <public IP of node 2>
+    ./cloud-report-2020 -azure -node1 <public IP of node 1> -node2 <public IP of node 2>
     ~~~
 
 Meaningful flags include:
@@ -106,7 +106,7 @@ Meaningful flags include:
 
 2. Run...
     ```
-    ./cloud-report-2019 -on-prem -node1 <public IP of node 1> -node2 <public IP of node 2>
+    ./cloud-report-2020 -on-prem -node1 <public IP of node 1> -node2 <public IP of node 2>
     ```
 
 Meaningful flags include:
