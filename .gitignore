@@ -1,9 +1,9 @@
-cloud-report-2019
+cloud-report-2020
 scripts.zip
 logs/azure/*
 logs/aws/*
 logs/gcp/*
-results/on-prem/*
+results/*
 credentials.json
 token.json
 cloudDetails/adhoc.json

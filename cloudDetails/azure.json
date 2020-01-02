@@ -1,0 +1,15 @@
+[
+  {
+    "name": "azure",
+    "machineTypes": [
+      "Standard_DS14_v2",
+      "Standard_DS5_v2",
+      "Standard_DS14",
+      "Standard_GS4",
+      "Standard_F16s_v2",
+      "Standard_E16s_v3",
+      "Standard_D16s_v3"
+    ]
+  }
+]
+
