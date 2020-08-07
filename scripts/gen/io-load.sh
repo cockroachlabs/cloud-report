@@ -30,18 +30,18 @@ if [ $TEST_FILES_COUNT -ne 64 ]; then
     if [ "$CLOUD" == "gcp" ]
     then
         sudo umount /mnt/data1
-        sudo mount -o discard,defaults,nobarrier $(awk '/\/mnt\/data1/ {print $1}' /etc/mtab) /mnt/data1
+        sudo mount -o discard,defaults $(awk '/\/mnt\/data1/ {print $1}' /etc/mtab) /mnt/data1
     elif [ $CLOUD == "aws" ]
     then
         DEV=$(mount | grep /mnt/data1 | awk '{print $1}'); 
         sudo umount /mnt/data1; 
-        sudo mount -o discard,defaults,nobarrier ${DEV} /mnt/data1/; 
+        sudo mount -o discard,defaults  ${DEV} /mnt/data1/;
         mount | grep /mnt/data1
     elif [ $CLOUD == "azure" ]
     then
         DEV=$(mount | grep /mnt | awk '{print $1}');
         sudo umount /mnt;
-        sudo mount -o discard,defaults,barrier=0 ${DEV} /mnt
+        sudo mount -o discard,defaults  ${DEV} /mnt
         mount | grep /mnt
         sudo mkdir /mnt/data1
     else
