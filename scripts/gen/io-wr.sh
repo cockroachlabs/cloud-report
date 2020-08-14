@@ -22,5 +22,19 @@ cd /mnt/data1
 
 > /mnt/data1/io-wr-results.log
 
-for each in 1 4 8 16 32 64; do sudo cgexec -g memory:group1 sysbench fileio --file-total-size=8G --file-test-mode=rndwr --time=240 --max-requests=0 --file-block-size=32K --file-num=64 --file-fsync-all --threads=$each run; sleep 10;
+for each in 1 4 8 16 32 64
+do
+  sudo cgexec -g memory:group1   \
+    sysbench fileio              \
+    --file-total-size=80G        \
+    --file-test-mode=rndwr       \
+    --time=240                   \
+    --max-requests=0             \
+    --file-block-size=32K        \
+    --file-num=64                \
+    --file-fsync-all             \
+    --file-fsync-mode=fdatasync  \
+    --threads=$each run
+
+    sleep 10;
 done &>> /mnt/data1/io-wr-results.log
