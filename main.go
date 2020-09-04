@@ -103,6 +103,15 @@ var benchmarks = []benchmark{
 		artifacts: []artifact{{"~/network-ping.log", 1}},
 	},
 	{
+		name: "netperf",
+		routines: []benchmarkRoutine{{
+			file: "./scripts/gen/network-netperf.sh",
+			arg:  argNode2InternalIP,
+			node: 1,
+		}},
+		artifacts: []artifact{{"~/netperf-results.log", 1}},
+	},
+	{
 		name: "cpu",
 		routines: []benchmarkRoutine{{
 			file: "./scripts/gen/cpu.sh",
