@@ -90,10 +90,14 @@ type benchmark struct {
 	routines []benchmarkRoutine
 	// artifacts to download at end of run.
 	artifacts []artifact
+
+	// disable this benchmark
+	disabled bool
 }
 
 var benchmarks = []benchmark{
 	{
+		disabled: true,
 		name: "ping",
 		routines: []benchmarkRoutine{{
 			file: "./scripts/gen/network-ping.sh",
@@ -101,6 +105,15 @@ var benchmarks = []benchmark{
 			node: 1,
 		}},
 		artifacts: []artifact{{"~/network-ping.log", 1}},
+	},
+	{
+		name: "netperf",
+		routines: []benchmarkRoutine{{
+			file: "./scripts/gen/network-netperf.sh",
+			arg:  argNode2InternalIP,
+			node: 1,
+		}},
+		artifacts: []artifact{{"~/netperf-results.log", 1}},
 	},
 	{
 		name: "cpu",
@@ -145,6 +158,8 @@ var benchmarks = []benchmark{
 		},
 	},
 	{
+		disabled: true,
+
 		name: "io",
 		routines: []benchmarkRoutine{
 			{
@@ -168,6 +183,20 @@ var benchmarks = []benchmark{
 			{"/mnt/data1/io-load-results.log", 1},
 			{"/mnt/data1/io-wr-results.log", 1},
 			{"/mnt/data1/io-rd-results.log", 1},
+		},
+	},
+	{
+		name: "fio",
+		routines: []benchmarkRoutine{
+			{
+				name: "write",
+				file: "./scripts/gen/fio.sh",
+				node: 1,
+				arg:  "/mnt/data1",
+			},
+		},
+		artifacts: []artifact{
+			{"/mnt/data1/fio/fio-report.log", 1},
 		},
 	},
 }
@@ -367,6 +396,9 @@ func (p platformRunner) run(
 
 	for _, b := range benchmarks {
 		if (*ioSkip && b.name == "io") || (*ioOnly && b.name != "io") || (*iperfOnly && b.name != "iperf") || (*cpuOnly && b.name != "cpu") {
+			continue
+		}
+		if b.disabled {
 			continue
 		}
 
