@@ -24,7 +24,7 @@ do
   for j in 1 4 8 16
   do
     echo "Running fio: jobs=$j bs=$bs"
-    fio --name="randrw-$bs" --bs=$bs --numjobs=$j "${fioargs[@]}" --group_reporting
+    fio --name="randrw-$bs" --bs=$bs --numjobs=$j "${fioargs[@]}"
   done
 done
 ) | tee "$fiodir/fio-report.log"
