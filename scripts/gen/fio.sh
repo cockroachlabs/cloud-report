@@ -1,30 +1,23 @@
 #!/bin/bash
 
+if [ "$EUID" != 0 ]
+then
+  echo "error: this script must execute under sudo"
+  exit 1
+fi
+
+set -e
+
 # Dir specifies directory to store files
 # and thus the *disk* to benchmark.
 fiodir=/mnt/data1/fio
+
+# Uncomment if you want to regenerate test files.
+# rm -rf /mnt/data1/fio
+
+report=/mnt/data1/fio-results.json
+
 mkdir -p "$fiodir"
 
-fioargs=(
-  --rw=randrw        # Random read/write
-  --rwmixread=80     # 80% reads
-  --direct=1         # Direct IO; no buffering
-  --iodepth=1        # Sync every op.  This matters for databases.
-  --end_fsync=1
-  --fsync_on_close=1
-  --size=512M        # Input size
-  --ioengine=libaio
-  --runtime=30       # Benchmark duration
-  --directory="$fiodir"
-)
-
-(
-for bs in 4k 8k 16k
-do
-  for j in 1 4 8 16
-  do
-    echo "Running fio: jobs=$j bs=$bs"
-    fio --name="randrw-$bs" --bs=$bs --numjobs=$j "${fioargs[@]}"
-  done
-done
-) | tee "$fiodir/fio-report.log"
+cd "$(dirname $0)"
+cgexec -g memory:group1 fio --output="$report" --output-format=json ./fio.cfg
