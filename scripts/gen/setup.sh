@@ -30,6 +30,7 @@ packages=(
     unzip jq
 )
 
+apt-get update
 apt-get -y install "${packages[@]}"
 bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
 curl -s https://packagecloud.io/install/repositories/akopytov/sysbench/script.deb.sh | sudo bash
