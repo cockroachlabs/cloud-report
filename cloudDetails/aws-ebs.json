@@ -2,10 +2,15 @@
   {
     "name": "aws",
     "ebsMachineTypes": [
-      "c5.4xlarge",
-      "c5n.4xlarge",
       "m5.4xlarge",
+      "m5n.4xlarge",
       "m5a.4xlarge",
+      "m6g.4xlarge",
+      "c6g.4xlarge",
+      "c5n.4xlarge",
+      "c5a.4xlarge",
+      "r5.4xlarge",
+      "r5n.4xlarge",
       "r5a.4xlarge"
     ]
   }
