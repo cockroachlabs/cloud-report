@@ -2,42 +2,58 @@
   {
     "name": "aws",
     "machineTypes": [
-      "c5d.4xlarge",
       "m5d.4xlarge",
+      "m5dn.4xlarge",
       "m5ad.4xlarge",
-      "i3.4xlarge",
+      "m6gd.4xlarge",
+      "c6gd.4xlarge",
+      "c5d.4xlarge",
+      "r5d.4xlarge",
+      "r5dn.4xlarge",
       "r5ad.4xlarge",
-      "r5d.4xlarge"
+      "h1.4xlarge",
+      "i3.4xlarge",
+      "i3en.6xlarge",
+      "x1e.4xlarge"
     ],
     "ebsMachineTypes": [
-      "c5.4xlarge",
-      "c5n.4xlarge",
       "m5.4xlarge",
+      "m5n.4xlarge",
       "m5a.4xlarge",
+      "m6g.4xlarge",
+      "c6g.4xlarge",
+      "c5n.4xlarge",
+      "c5a.4xlarge",
+      "r5.4xlarge",
+      "r5n.4xlarge",
       "r5a.4xlarge"
     ]
   },
   {
     "name": "gcp",
     "machineTypes": [
-      "n2-standard-16",
-      "n2-highmem-16",
-      "n2-highcpu-16",
-      "n1-standard-16",
-      "n1-highmem-16",
-      "n1-highcpu-16"
+    "n2-standard-16",
+    "n2d-standard-16"
+    "n2-highmem-16",
+    "n2-highcpu-16",
+    "n2d-highcpu-16",
+    "c2-standard-16",
+    "m1-ultramem-40",
+    "n2-highmem-16",
+    "n2d-highmem-16"
     ]
-  },
+    }
   {
     "name": "azure",
     "machineTypes": [
-      "Standard_DS14_v2",
-      "Standard_DS5_v2",
-      "Standard_DS14",
-      "Standard_GS4",
-      "Standard_F16s_v2",
-      "Standard_E16s_v3",
-      "Standard_D16s_v3"
+      "Standard_D16s_v4",
+      "Standard_D16ds_v4",
+      "Standard_D16as_v4",
+      "Standard_F16s_v4",
+      "Standard_E16s_v4",
+      "Standard_E16ds_v4",
+      "Standard_E16as_v4",
+      "Standard_L16s_v4"
     ]
   }
 ]
