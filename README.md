@@ -28,11 +28,11 @@ _Note_: It would be possible to extend this binary to run on other platforms rel
 **Jessica Edwards** for Marketing
 - Report production and promotion, messaging
 
-**Jim Walker** for Product Marketing
+**John Kendall** for Product Marketing
 - Messaging, direction, and competitive landscape
 
-**Nathan VanBenschoten** for Engineering
-- Technical oversight and insight
+**Yevgeniy Miretsky** for Engineering
+- Data collection and aggregation
 
-**Paul Bardea** for Engineering
+**Arul Ajmani** for Engineering
 - Data collection and aggregation
