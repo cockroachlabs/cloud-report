@@ -1,6 +1,7 @@
 [
   {
-    "name": "aws",
+    "group": "local-ssd",
+    "cloud": "aws",
     "machineTypes": [
       "m5d.4xlarge",
       "m5dn.4xlarge",
@@ -15,7 +16,15 @@
       "i3.4xlarge",
       "i3en.6xlarge"
     ],
-    "ebsMachineTypes": [
+    "roachprodArgs": {
+      "aws-cpu-options": "CoreCount=16,ThreadsPerCore=2",
+      "local-ssd": "true"
+    }
+  },
+  {
+    "group": "ebs-gp2",
+    "cloud": "aws",
+    "machineTypes": [
       "m5.4xlarge",
       "m5n.4xlarge",
       "m5a.4xlarge",
@@ -27,6 +36,33 @@
       "r5.4xlarge",
       "r5n.4xlarge",
       "r5a.4xlarge"
-    ]
+    ],
+    "roachprodArgs" : {
+      "aws-cpu-options":  "CoreCount=16,ThreadsPerCore=2",
+      "local-ssd":  "false",
+      "aws-ebs-volume-type": "gp2"
+    }
+  },
+  {
+    "group": "ebs-io2",
+    "cloud": "aws",
+    "machineTypes": [
+      "m5.4xlarge",
+      "m5n.4xlarge",
+      "m5a.4xlarge",
+      "m6g.4xlarge",
+      "c6g.4xlarge",
+      "c5n.4xlarge",
+      "c5a.4xlarge",
+      "x1e.4xlarge",
+      "r5.4xlarge",
+      "r5n.4xlarge",
+      "r5a.4xlarge"
+    ],
+    "roachprodArgs" : {
+      "aws-cpu-options":  "CoreCount=16,ThreadsPerCore=2",
+      "local-ssd":  "false",
+      "aws-ebs-volume-type": "io2"
+    }
   }
 ]
