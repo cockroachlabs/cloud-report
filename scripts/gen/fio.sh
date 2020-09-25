@@ -6,7 +6,14 @@ then
   exit 1
 fi
 
-set -e
+
+logdir="$HOME/fio-results"
+rm -rf "$logdir"
+mkdir "$logdir"
+report="${logdir}/fio-results.json"
+exec &> >(tee -a "$logdir/script.log")
+set -ex
+
 
 # Dir specifies directory to store files
 # and thus the *disk* to benchmark.
@@ -14,9 +21,6 @@ fiodir=/mnt/data1/fio
 
 # Uncomment if you want to regenerate test files.
 # rm -rf /mnt/data1/fio
-
-report=/mnt/data1/fio-results.json
-
 mkdir -p "$fiodir"
 
 cd "$(dirname $0)"

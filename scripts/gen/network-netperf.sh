@@ -9,33 +9,22 @@ then
   exit 1
 fi
 
-
-install_netperf() {
-  host=$1
-  cmd="sudo apt-get update && sudo apt-get install -y netperf"
-  echo "Ensuring netperf up to date on $host"
-  if [ "$host" = "localhost" ]
-  then
-    sh -c "$cmd" > /dev/null 2>&1
-  else
-    ssh "$host" "$cmd" > /dev/null 2>&1
-  fi
-}
-
-
-install_netperf "$SERVER"
-install_netperf "localhost"
+logdir="$HOME/netperf-results"
+rm -rf "$logdir"
+mkdir "$logdir"
+report="${logdir}/netperf-results.log"
+exec &> >(tee -a "$logdir/script.log")
+set -ex
 
 echo "Using $(netperf -V)"
 echo "Starting netserver on $SERVER:$port"
 ssh "$SERVER" "sudo netserver -p $port"
 
+# TODO: run clients on multiple nodes.
 echo "Starting netperf client: 10 iterations, 30 seconds each"
 (
   for i in $(seq 1 10)
   do
     netperf -H "$SERVER" -p "$port" -t TCP_RR -l 30 -- -o min_latency,max_latency,mean_latency
   done
-) | tee "netperf-results.log"
-
-
+) | tee "$report"

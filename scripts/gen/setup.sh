@@ -6,7 +6,7 @@
 # This script is intended to be invoked via "roachprod" command.
 # Alternatively, execute this script manually.
 
-exec >setup.log 2>&1
+exec &> >(tee -a "setup.log")
 
 if [ "$EUID" != 0 ]
 then
