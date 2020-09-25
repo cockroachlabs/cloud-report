@@ -21,10 +21,9 @@ echo "Starting netserver on $SERVER:$port"
 ssh "$SERVER" "sudo netserver -p $port"
 
 # TODO: run clients on multiple nodes.
-echo "Starting netperf client: 10 iterations, 30 seconds each"
 (
-  for i in $(seq 1 10)
-  do
-    netperf -H "$SERVER" -p "$port" -t TCP_RR -l 30 -- -o min_latency,max_latency,mean_latency
-  done
+  # Latency
+  netperf "$SERVER" -p "$port" -l 60 -I 99,5  -t TCP_RR -- -O min_latency,mean_latency,P90_LATENCY,P99_LATENCY,max_latency,stddev_latency,transaction_rate
+  # Throughput
+  netperf "$SERVER" -p "$port" -l 60 -I 99,5 -t OMNI -- -O LSS_SIZE_END,RSR_SIZE_END,LSS_SIZE,ELAPSED,THROUGHPUT,THROUGHPUT_UNITS
 ) | tee "$report"
