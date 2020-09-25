@@ -136,6 +136,11 @@ function benchmark() {
   done
 }
 
+# Destroy roachprod cluster
+function destroy() {
+  roachprod destroy "$CLUSTER"
+}
+
 # Commands to execute specified on a command line
 # TODO: we assume the order of commands makes sense (i.e. create before setup).
 cmds=("$@")
@@ -174,8 +179,11 @@ do
   tpcc)
     implement_me
   ;;
+  destroy)
+    destroy
+  ;;
   *)
-    echo "Usage: [ITERATIONS=n] $0 [ create | upload_scripts | setup | cpu | io | net | tpcc ]" >&2
+    echo "Usage: [ITERATIONS=n] $0 [ create | upload_scripts | setup | cpu | io | net | tpcc | destroy ]" >&2
   ;;
   esac
 done
