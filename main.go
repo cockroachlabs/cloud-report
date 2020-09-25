@@ -24,126 +24,6 @@ var scriptsDir = flag.String("scripts-dir", "./scripts", "directory containing c
 var reportVersion = flag.String("report-version", time.Now().Format("20060102"), "subdirectory to write data to")
 var crlUsername = flag.String("u", "", "CRL username, if different from `whoami`")
 
-// TODO: leaving benchmark list as a record of what needs to be migrated.
-// benchmark describes the benchmark you want to run and its outputs.
-// type benchmark struct {
-// 	// Name to print when benchmark is running.
-// 	name string
-// 	// benchmarkRoutine to run.
-// 	routines []benchmarkRoutine
-// 	// artifacts to download at end of run.
-// 	artifacts []artifact
-//
-// 	// disable this benchmark
-// 	disabled bool
-// }
-//
-// var benchmarks = []benchmark{
-// 	{
-// 		disabled: true,
-// 		name:     "ping",
-// 		routines: []benchmarkRoutine{{
-// 			file: "./scripts/gen/network-ping.sh",
-// 			arg:  argNode2InternalIP,
-// 			node: 1,
-// 		}},
-// 		artifacts: []artifact{{"~/network-ping.log", 1}},
-// 	},
-// 	{
-// 		name: "netperf",
-// 		routines: []benchmarkRoutine{{
-// 			file: "./scripts/gen/network-netperf.sh",
-// 			arg:  argNode2InternalIP,
-// 			node: 1,
-// 		}},
-// 		artifacts: []artifact{{"~/netperf-results.log", 1}},
-// 	},
-// 	{
-// 		name: "cpu",
-// 		routines: []benchmarkRoutine{{
-// 			file: "./scripts/gen/cpu.sh",
-// 			node: 1,
-// 		}},
-// 		artifacts: []artifact{{"~/cpu.log", 1}},
-// 	},
-// 	{
-// 		name: "iperf",
-// 		routines: []benchmarkRoutine{
-// 			{
-// 				name:              "client",
-// 				file:              "./scripts/gen/network-iperf-client.sh",
-// 				arg:               argNode2InternalIP,
-// 				launchAsGoroutine: true,
-// 				node:              1,
-// 			},
-// 			{
-// 				name:              "client",
-// 				file:              "./scripts/gen/network-iperf-client.sh",
-// 				arg:               argNode2InternalIP,
-// 				launchAsGoroutine: true,
-// 				node:              3,
-// 			},
-// 			{
-// 				name:              "client",
-// 				file:              "./scripts/gen/network-iperf-client.sh",
-// 				arg:               argNode2InternalIP,
-// 				launchAsGoroutine: true,
-// 				node:              4,
-// 			},
-// 			{
-// 				name: "server",
-// 				file: "./scripts/gen/network-iperf-server.sh",
-// 				node: 2,
-// 			},
-// 		},
-// 		artifacts: []artifact{
-// 			{"~/network-iperf-server.log", 2},
-// 		},
-// 	},
-// 	{
-// 		disabled: true,
-//
-// 		name: "io",
-// 		routines: []benchmarkRoutine{
-// 			{
-// 				name: "load",
-// 				file: "./scripts/gen/io-load.sh",
-// 				arg:  argCloudName,
-// 				node: 1,
-// 			},
-// 			{
-// 				name: "write",
-// 				file: "./scripts/gen/io-wr.sh",
-// 				node: 1,
-// 			},
-// 			{
-// 				name: "read",
-// 				file: "./scripts/gen/io-rd.sh",
-// 				node: 1,
-// 			},
-// 		},
-// 		artifacts: []artifact{
-// 			{"/mnt/data1/io-load-results.log", 1},
-// 			{"/mnt/data1/io-wr-results.log", 1},
-// 			{"/mnt/data1/io-rd-results.log", 1},
-// 		},
-// 	},
-// 	{
-// 		name: "fio",
-// 		routines: []benchmarkRoutine{
-// 			{
-// 				name: "write",
-// 				file: "./scripts/gen/fio.sh",
-// 				node: 1,
-// 				arg:  "/mnt/data1",
-// 			},
-// 		},
-// 		artifacts: []artifact{
-// 			{"/mnt/data1/fio/fio-report.log", 1},
-// 		},
-// 	},
-// }
-
 // CloudDetails provides the name of the cloud and the different
 // machine types you should run the benchmark suite against.
 type CloudDetails struct {
@@ -177,10 +57,18 @@ type scriptData struct {
 }
 
 const driverTemplate = `#!/bin/bash
-set -ex
+
 CLOUD="{{.CloudDetails.Cloud}}"
 CLUSTER="{{.Cluster}}"
 NODES=4
+
+set -ex
+scriptName=$(basename ${0%.*})
+logdir="$(dirname $0)/../logs/${scriptName}"
+mkdir -p "$logdir"
+
+# Redirect stdout and stderr into script log file
+exec &> >(tee -a "$logdir/driver.log")
 
 # Create roachprod cluster
 function create() {
@@ -194,15 +82,58 @@ function create() {
     --${type}-machine-type "{{.MachineType}}" {{.EvaledArgs}}
 }
 
-# Setup and configure roachprod cluster.
+# Upload scripts to roachprod cluster
+function upload_scripts() {
+  roachprod run "$CLUSTER" rm  -- -rf ./scripts
+  roachprod put "$CLUSTER" {{.ScriptsDir}} scripts
+  roachprod run "$CLUSTER" chmod -- -R +x ./scripts
+}
+
+# Execute setup.sh script on the cluster to configure it
 function setup() {
-	{{.ScriptsDir}}/setup.sh "$CLOUD" "$CLUSTER"
+	roachprod run "$CLUSTER" sudo ./scripts/gen/setup.sh "$CLOUD"
+}
+
+#
+# Benchmark scripts should execute a single benchmark
+# and download results to the $logdir directory.
+# Do not assume a single benchmark invocation: 
+#   download benchmark results to unique directories (dated).
+#
+function results_dir() {
+  echo "$logdir/$1.$(date +%Y%m%d.%T)"
 }
 
 # Run CPU benchmark
 function bench_cpu() {
   roachprod run "$CLUSTER":1  ./scripts/gen/cpu.sh
-  #TODO: download artifacts
+  roachprod get "$CLUSTER":1 ./coremark-results $(results_dir "coremark-results")
+}
+
+# Run FIO benchmark
+function bench_io() {
+  roachprod run "$CLUSTER":1 sudo ./scripts/gen/fio.sh
+  roachprod get "$CLUSTER":1 ./fio-results $(results_dir "fio-results")
+}
+
+# Run Netperf benchmark
+function bench_net() {
+  server=$(roachprod ip "$CLUSTER":2)
+  roachprod run "$CLUSTER":1 ./scripts/gen/network-netperf.sh $server
+  roachprod get "$CLUSTER":1 ./netperf-results $(results_dir "netperf-results")
+}
+
+#
+# benchmark executes benchmark (passed as an argument) ITERATIONS number of times.
+# 
+function benchmark() {
+  bench=$1
+  shift
+  for ((i=0; i<${ITERATIONS:-1}; i++))
+  do
+    echo "Benching $bench: iteration $i"
+    $bench "$@"
+  done
 }
 
 # Commands to execute specified on a command line
@@ -210,32 +141,41 @@ function bench_cpu() {
 cmds=("$@")
 if [ ${#cmds[@]} -eq 0 ]; then
   # If not specified, run all commands
-  cmds=("create" "setup" "cpu" "io" "net" "tpcc")
+  cmds=("create" "upload_scripts" "setup" "cpu" "io" "net" "tpcc")
 fi
 
 for cmd in "${cmds[@]}"
 do
   case $cmd in
   create)
-    create $*
+    create
+  ;;
+  upload_scripts)
+    upload_scripts
   ;;
   setup)
-    setup $*
+    setup
+  ;;
+  init)
+    # Just a shorthand for the above 3 steps.
+    create
+    upload_scripts
+    setup
   ;;
   cpu)
-    bench_cpu $*
+    benchmark bench_cpu
   ;;
   io)
-    implement_me $*
+   benchmark bench_io
   ;;
   net)
-    implement_me $*
+    benchmark bench_net
   ;;
   tpcc)
-    implement_me $*
+    implement_me
   ;;
   *)
-    echo "Usage: $0 [ create | setup | cpu | io | net | tpcc ]" >&2
+    echo "Usage: [ITERATIONS=n] $0 [ create | upload_scripts | setup | cpu | io | net | tpcc ]" >&2
   ;;
   esac
 done
