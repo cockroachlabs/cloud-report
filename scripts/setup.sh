@@ -14,7 +14,7 @@ fi
 # roachprod run "$CLUSTER" rm -- -rf ./scripts
 
 echo "Uploading scripts to $CLUSTER"
-roachprod put "$CLUSTER" scripts
+roachprod put "$CLUSTER" `dirname $0` scripts
 roachprod run "$CLUSTER" chmod -- -R +x ./scripts
 
 echo "Executing setup.sh on $CLUSTER"
