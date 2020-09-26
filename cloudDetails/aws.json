@@ -6,8 +6,12 @@
       "m5d.4xlarge": null,
       "m5dn.4xlarge": null,
       "m5ad.4xlarge": null,
-      "m6gd.4xlarge": null,
-      "c6gd.4xlarge": null,
+      "m6gd.4xlarge": {
+        "aws-image-ami": "ami-007a607c4abd192db"
+      },
+      "c6gd.4xlarge": {
+        "aws-image-ami": "ami-007a607c4abd192db"
+      },
       "c5d.4xlarge": null,
       "r5d.4xlarge": null,
       "r5dn.4xlarge": null,
@@ -32,8 +36,12 @@
       "m5.4xlarge": null,
       "m5n.4xlarge": null,
       "m5a.4xlarge": null,
-      "m6g.4xlarge": null,
-      "c6g.4xlarge": null,
+      "m6g.4xlarge": {
+        "aws-image-ami": "ami-007a607c4abd192db"
+      },
+      "c6g.4xlarge": {
+        "aws-image-ami": "ami-007a607c4abd192db"
+      },
       "c5n.4xlarge": null,
       "c5a.4xlarge": null,
       "x1e.4xlarge": null,
@@ -54,8 +62,12 @@
       "m5.4xlarge": null,
       "m5n.4xlarge": null,
       "m5a.4xlarge": null,
-      "m6g.4xlarge": null,
-      "c6g.4xlarge": null,
+      "m6g.4xlarge": {
+        "aws-image-ami": "ami-007a607c4abd192db"
+      },
+      "c6g.4xlarge": {
+        "aws-image-ami": "ami-007a607c4abd192db"
+      },
       "c5n.4xlarge": null,
       "c5a.4xlarge": null,
       "x1e.4xlarge": null,
