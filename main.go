@@ -72,14 +72,8 @@ exec &> >(tee -a "$logdir/driver.log")
 
 # Create roachprod cluster
 function create() {
-  type="$CLOUD"
-  if [ "$CLOUD" = "gcp" ]
-  then
-    type="gce"
-  fi
-
   roachprod create "$CLUSTER" -n $NODES --lifetime "{{.Lifetime}}" --clouds "$CLOUD" \
-    --${type}-machine-type "{{.MachineType}}" {{.EvaledArgs}}
+    --$CLOUD-machine-type "{{.MachineType}}" {{.EvaledArgs}}
 }
 
 # Upload scripts to roachprod cluster
@@ -214,7 +208,7 @@ func generateScripts(cloud CloudDetails) error {
 		return err
 	}
 
-	clusterPrefix := *crlUsername + "-cldrprt21-micro"
+	clusterPrefix := *crlUsername + "-cldrprt21"
 
 	scriptTemplate := template.Must(template.New("script").Parse(driverTemplate))
 
