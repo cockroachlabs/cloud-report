@@ -17,7 +17,7 @@ fi
 CLOUD=$1
 if [ -z "$CLOUD" ]
 then
-      echo "error: please specify cloud (gcp, aws, azure) as first arg"
+      echo "error: please specify cloud (gce, aws, azure) as first arg"
       exit
 fi
 
@@ -35,7 +35,7 @@ apt-get -y install "${packages[@]}"
 bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
 curl -s https://packagecloud.io/install/repositories/akopytov/sysbench/script.deb.sh | sudo bash
 
-if [ "$CLOUD" == "gcp" ]
+if [ "$CLOUD" == "gce" ]
 then
     umount /mnt/data1
     mount -o discard,defaults "$(awk '/\/mnt\/data1/ {print $1}' /etc/fstab)" /mnt/data1
@@ -53,7 +53,7 @@ then
     mount | grep /mnt
     mkdir -p /mnt/data1
 else
-    echo "Invalid cloud option; choose gcp, aws, or azure" 1>&2
+    echo "Invalid cloud option; choose gce, aws, or azure" 1>&2
     exit 1
 fi
 

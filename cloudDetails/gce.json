@@ -1,0 +1,22 @@
+[
+    {
+        "group": "local-ssd",
+        "cloud": "gce",
+        "machineTypes": {
+            "n2-standard-16": null,
+            "n2d-standard-16": null,
+            "n2-highmem-16": null,
+            "n2-highcpu-16": null,
+            "n2d-highcpu-16": null,
+            "c2-standard-16": null,
+            "m1-ultramem-40":  null,
+            "n2-highmem-16":  null,
+            "n2d-highmem-16": null
+        },
+        "roachprodArgs": {
+            "local-ssd": null,
+            "gce-image": "ubuntu-1804-bionic-v20200923"
+        }
+    }
+]
+
