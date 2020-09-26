@@ -20,7 +20,9 @@
     },
     "roachprodArgs": {
       "local-ssd": null,
-      "aws-machine-type-ssd": "{{.MachineType}}"
+      "aws-machine-type-ssd": "{{.MachineType}}",
+      "aws-zones": "us-east-1a",
+      "aws-image-ami": "ami-013da1cc4ae87618c"
     }
   },
   {
@@ -40,7 +42,9 @@
       "r5a.4xlarge": null
     },
     "roachprodArgs" : {
-      "aws-ebs-volume-type": "gp2"
+      "aws-ebs-volume-type": "gp2",
+      "aws-zones": "us-east-1a",
+      "aws-image-ami": "ami-013da1cc4ae87618c"
     }
   },
   {
@@ -60,7 +64,9 @@
       "r5a.4xlarge": null
     },
     "roachprodArgs" : {
-      "aws-ebs-volume-type": "io2"
+      "aws-ebs-volume-type": "io2",
+      "aws-zones": "us-east-1a",
+      "aws-image-ami": "ami-013da1cc4ae87618c"
     }
   }
 ]
