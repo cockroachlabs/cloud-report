@@ -189,18 +189,15 @@ do
 done
 `
 
-func evalArgs(args map[string]string, templateArgs scriptData, buf *bytes.Buffer) error {
-	for arg, val := range args {
-		if buf.Len() > 0 {
-			buf.WriteByte(' ')
+func evalArgs(
+	inputArgs map[string]string, templateArgs scriptData, evaledArgs map[string]string,
+) error {
+	for arg, val := range inputArgs {
+		buf := bytes.NewBuffer(nil)
+		if err := template.Must(template.New("arg").Parse(val)).Execute(buf, templateArgs); err != nil {
+			return fmt.Errorf("error evaluating arg %s: %v", arg, err)
 		}
-		fmt.Fprintf(buf, "--%s", arg)
-		if len(val) > 0 {
-			evaledArg := template.Must(template.New("arg").Parse(fmt.Sprintf(" %q", val)))
-			if err := evaledArg.Execute(buf, templateArgs); err != nil {
-				return fmt.Errorf("error evaluating arg %s: %v", arg, err)
-			}
-		}
+		evaledArgs[arg] = buf.String()
 	}
 	return nil
 }
@@ -232,14 +229,25 @@ func generateScripts(cloud CloudDetails) error {
 		}
 
 		// Evaluate roachprodArgs: those maybe templatized.
-		evaledArgs := bytes.NewBuffer(nil)
+		evaledArgs := make(map[string]string)
 		if err := evalArgs(cloud.RoachprodArgs, templateArgs, evaledArgs); err != nil {
 			return err
 		}
 		if err := evalArgs(machineArgs, templateArgs, evaledArgs); err != nil {
 			return err
 		}
-		templateArgs.EvaledArgs = evaledArgs.String()
+
+		buf := bytes.NewBuffer(nil)
+		for arg, val := range evaledArgs {
+			if buf.Len() > 0 {
+				buf.WriteByte(' ')
+			}
+			fmt.Fprintf(buf, "--%s", arg)
+			if len(val) > 0 {
+				fmt.Fprintf(buf, " %q", val)
+			}
+		}
+		templateArgs.EvaledArgs = buf.String()
 
 		scriptName := path.Join(
 			scriptDir,
