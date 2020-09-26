@@ -182,6 +182,20 @@ do
   esac
 done
 `
+// combineArgs takes base arguments applicable to the cloud and machine specific
+// args and combines them by specializing machine specific args if there is a
+// conflict.
+func combineArgs(machineArgs map[string]string, baseArgs map[string]string) map[string]string {
+	if machineArgs == nil {
+		return baseArgs
+	}
+	for arg, val := range baseArgs {
+		if _, found :=machineArgs[arg]; !found {
+			machineArgs[arg] = val
+		}
+	}
+	return machineArgs
+}
 
 func evalArgs(
 	inputArgs map[string]string, templateArgs scriptData, evaledArgs map[string]string,
@@ -224,10 +238,8 @@ func generateScripts(cloud CloudDetails) error {
 
 		// Evaluate roachprodArgs: those maybe templatized.
 		evaledArgs := make(map[string]string)
-		if err := evalArgs(cloud.RoachprodArgs, templateArgs, evaledArgs); err != nil {
-			return err
-		}
-		if err := evalArgs(machineArgs, templateArgs, evaledArgs); err != nil {
+		combinedArgs := combineArgs(machineArgs, cloud.RoachprodArgs)
+		if err := evalArgs(combinedArgs, templateArgs, evaledArgs); err != nil {
 			return err
 		}
 
