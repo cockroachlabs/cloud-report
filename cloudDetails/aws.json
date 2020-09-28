@@ -7,10 +7,10 @@
       "m5dn.4xlarge": null,
       "m5ad.4xlarge": null,
       "m6gd.4xlarge": {
-        "aws-image-ami": "ami-007a607c4abd192db"
+        "aws-image-ami": "ami-0567cfa579580f324"
       },
       "c6gd.4xlarge": {
-        "aws-image-ami": "ami-007a607c4abd192db"
+        "aws-image-ami": "ami-0567cfa579580f324"
       },
       "c5d.4xlarge": null,
       "r5d.4xlarge": null,
@@ -37,10 +37,10 @@
       "m5n.4xlarge": null,
       "m5a.4xlarge": null,
       "m6g.4xlarge": {
-        "aws-image-ami": "ami-007a607c4abd192db"
+        "aws-image-ami": "ami-0567cfa579580f324"
       },
       "c6g.4xlarge": {
-        "aws-image-ami": "ami-007a607c4abd192db"
+        "aws-image-ami": "ami-0567cfa579580f324"
       },
       "c5n.4xlarge": null,
       "c5a.4xlarge": null,
@@ -63,10 +63,10 @@
       "m5n.4xlarge": null,
       "m5a.4xlarge": null,
       "m6g.4xlarge": {
-        "aws-image-ami": "ami-007a607c4abd192db"
+        "aws-image-ami": "ami-0567cfa579580f324"
       },
       "c6g.4xlarge": {
-        "aws-image-ami": "ami-007a607c4abd192db"
+        "aws-image-ami": "ami-0567cfa579580f324"
       },
       "c5n.4xlarge": null,
       "c5a.4xlarge": null,
