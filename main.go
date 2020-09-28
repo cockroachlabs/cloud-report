@@ -9,7 +9,6 @@ import (
 	"log"
 	"os"
 	"os/exec"
-	"os/user"
 	"path"
 	"regexp"
 	"strings"
@@ -22,7 +21,6 @@ var cloudDetailsFile = flag.String("cloud-details", "./cloudDetails/default.json
 var baseOutputDir = flag.String("output-dir", "./report-data", "directory to emit results and scripts")
 var scriptsDir = flag.String("scripts-dir", "./scripts", "directory containing cloud benchmark scripts")
 var reportVersion = flag.String("report-version", time.Now().Format("20060102"), "subdirectory to write data to")
-var crlUsername = flag.String("u", "", "CRL username, if different from `whoami`")
 
 // CloudDetails provides the name of the cloud and the different
 // machine types you should run the benchmark suite against.
@@ -59,7 +57,7 @@ type scriptData struct {
 const driverTemplate = `#!/bin/bash
 
 CLOUD="{{.CloudDetails.Cloud}}"
-CLUSTER="{{.Cluster}}"
+CLUSTER="$USER-{{.Cluster}}"
 NODES=4
 TMUX_SESSION="cloud-report"
 
@@ -295,12 +293,10 @@ func generateScripts(cloud CloudDetails) error {
 		return err
 	}
 
-	clusterPrefix := *crlUsername + "-cldrprt21"
-
 	scriptTemplate := template.Must(template.New("script").Parse(driverTemplate))
-
 	for machineType, machineArgs := range cloud.MachineTypes {
-		clusterName := fmt.Sprintf("%s-%s-%s-%s-%s", clusterPrefix, cloud.Cloud, cloud.Group, *reportVersion, machineType)
+		clusterName := fmt.Sprintf("cloud-report%d-%s-%s-%s-%s",
+			time.Now().Year(), cloud.Cloud, cloud.Group, *reportVersion, machineType)
 		validClusterName := regexp.MustCompile(`[\.|\_]`)
 		clusterName = validClusterName.ReplaceAllString(clusterName, "-")
 
@@ -350,14 +346,6 @@ func generateScripts(cloud CloudDetails) error {
 func main() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 	flag.Parse()
-
-	if *crlUsername == "" {
-		u, err := user.Current()
-		if err != nil {
-			log.Fatal(err)
-		}
-		*crlUsername = u.Username
-	}
 
 	// Check roachprod.
 	_, err := exec.LookPath("roachprod")
