@@ -34,16 +34,6 @@ while getopts 'fws:p:dS' flag; do
   esac
 done
 
-if [ -z "$f_port" ]
-then
-  usage "-p argument required"
-fi
-
-if [ -n "$f_server_mode" ];
-then
-   exec sh -c "sudo lsof -i :$f_port >/dev/null || sudo netserver -p $f_port"
-fi
-
 logdir="$HOME/netperf-results"
 
 if [ -n "$f_wait" ];
@@ -52,6 +42,16 @@ then
     ( test -f '$logdir/success' ||
       (tail --pid \$(cat $pidfile) -f /dev/null && test -f '$logdir/success')
     ) || (echo 'Network benchmark did not complete successfully.  Check logs'; exit 1)"
+fi
+
+if [ -z "$f_port" ]
+then
+  usage "-p argument required"
+fi
+
+if [ -n "$f_server_mode" ];
+then
+   exec sh -c "sudo lsof -i :$f_port >/dev/null || sudo netserver -p $f_port"
 fi
 
 if [ -f "$pidfile" ] && [ -z "$f_force" ]
