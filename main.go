@@ -142,7 +142,7 @@ function bench_net() {
 
 # Wait for Netperf benchmark to complete and fetch results.
 function fetch_bench_net_results() {
-  roachprod run "$CLUSTER":3 ./scripts/gen/network-netperf.sh -- w
+  roachprod run "$CLUSTER":3 ./scripts/gen/network-netperf.sh -- -w
   roachprod get "$CLUSTER":3 ./netperf-results $(results_dir "netperf-results")	
 }
 
