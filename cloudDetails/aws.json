@@ -16,9 +16,6 @@
       "r5d.4xlarge": null,
       "r5dn.4xlarge": null,
       "r5ad.4xlarge": null,
-      "h1.4xlarge": {
-        "aws-zones": "us-east-1b"
-      },
       "i3.4xlarge": null,
       "i3en.6xlarge": {
         "aws-cpu-options": "CoreCount=16,ThreadsPerCore=2"
