@@ -25,7 +25,8 @@
       "local-ssd": null,
       "aws-machine-type-ssd": "{{.MachineType}}",
       "aws-zones": "us-east-1a",
-      "aws-image-ami": "ami-013da1cc4ae87618c"
+      "aws-image-ami": "ami-013da1cc4ae87618c",
+      "local-ssd-no-ext4-barrier": "false"
     }
   },
   {
