@@ -50,6 +50,10 @@ mkdir "$logdir"
 report="${logdir}/fio-results.json"
 exec &> >(tee -a "$logdir/script.log")
 
+# Dump lsblk and df information (to make sure we have the right disks)
+lsblk
+df -h
+
 # Dir specifies directory to store files
 # and thus the *disk* to benchmark.
 fiodir=/mnt/data1/fio
