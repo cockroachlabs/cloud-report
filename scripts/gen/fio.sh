@@ -39,7 +39,11 @@ then
   exit
 fi
 
-trap "rm -f $pidfile" EXIT SIGINT
+# Dir specifies directory to store files
+# and thus the *disk* to benchmark.
+fiodir=/mnt/data1/fio
+
+trap "rm -f $pidfile; rm -rf $fiodir" EXIT SIGINT
 echo $$ > "$pidfile"
 
 # Remove processed options.  Remaining ones assumed to be FIO specific flags.
@@ -53,10 +57,6 @@ exec &> >(tee -a "$logdir/script.log")
 # Dump lsblk and df information (to make sure we have the right disks)
 lsblk
 df -h
-
-# Dir specifies directory to store files
-# and thus the *disk* to benchmark.
-fiodir=/mnt/data1/fio
 
 # Uncomment if you want to regenerate test files.
 # rm -rf /mnt/data1/fio
