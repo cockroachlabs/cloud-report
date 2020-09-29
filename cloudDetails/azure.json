@@ -15,7 +15,8 @@
     },
     "roachprodArgs": {
       "local-ssd": null,
-      "azure-locations": "eastus"
+      "azure-locations": "eastus",
+      "local-ssd-no-ext4-barrier": "false"
    }
   }
 ]
