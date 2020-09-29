@@ -149,6 +149,10 @@ function bench_tpcc() {
   echo "IMPLEMENT ME" $tpcc_extra_args
 }
 
+function fetch_bench_tpcc_results() {
+  echo "Implement me"
+}
+
 # Destroy roachprod cluster
 function destroy_cluster() {
   roachprod destroy "$CLUSTER"
