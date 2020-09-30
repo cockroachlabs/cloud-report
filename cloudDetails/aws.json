@@ -52,7 +52,8 @@
     "roachprodArgs" : {
       "aws-ebs-volume-type": "gp2",
       "aws-zones": "us-east-1a",
-      "aws-image-ami": "ami-013da1cc4ae87618c"
+      "aws-image-ami": "ami-013da1cc4ae87618c",
+      "local-ssd": "false"
     }
   },
   {
@@ -78,7 +79,8 @@
     "roachprodArgs" : {
       "aws-ebs-volume-type": "io2",
       "aws-zones": "us-east-1a",
-      "aws-image-ami": "ami-013da1cc4ae87618c"
+      "aws-image-ami": "ami-013da1cc4ae87618c",
+      "local-ssd": "false"
     }
   }
 ]
