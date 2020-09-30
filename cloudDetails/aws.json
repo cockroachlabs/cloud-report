@@ -18,7 +18,7 @@
       "r5ad.4xlarge": null,
       "i3.4xlarge": null,
       "i3en.6xlarge": {
-        "aws-cpu-options": "CoreCount=16,ThreadsPerCore=2"
+        "aws-cpu-options": "CoreCount=8,ThreadsPerCore=2"
       }
     },
     "roachprodArgs": {
