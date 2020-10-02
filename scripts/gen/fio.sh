@@ -43,7 +43,7 @@ fi
 # and thus the *disk* to benchmark.
 fiodir=/mnt/data1/fio
 
-trap "rm -f $pidfile; rm -rf $fiodir" EXIT SIGINT
+trap "rm -f $pidfile; sudo rm -rf $fiodir" EXIT SIGINT
 echo $$ > "$pidfile"
 
 # Remove processed options.  Remaining ones assumed to be FIO specific flags.
