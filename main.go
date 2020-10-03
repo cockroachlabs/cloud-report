@@ -393,6 +393,15 @@ type resultsAnalyzer interface {
 	Analyze(cloud CloudDetails) error
 }
 
+type analysisResult interface {
+	ModificationTime() time.Time
+}
+
+type baseAnalyzer struct {
+	machineResults map[string]analysisResult
+	cloud          string
+}
+
 // lat represents fio total latencies.
 // Values in nanoseconds.
 type lat struct {
@@ -545,6 +554,8 @@ func (f *fioAnalyzer) Analyze(cloud CloudDetails) error {
 //
 // CPU Analysis
 //
+const cpuCSVHeader = "Cloud,Date,MachineType,Cores,Single,Multi,Multi/vCPU"
+
 type coremarkResult struct {
 	cores   int64
 	single  float64
@@ -552,15 +563,24 @@ type coremarkResult struct {
 	modtime time.Time
 }
 
+// coremarkResult implements the analysisResult interface
+func (c *coremarkResult) ModificationTime() time.Time {
+	return c.modtime
+}
+
+var _ analysisResult = &coremarkResult{}
+
 type coremarkAnalyzer struct {
-	cloud          string
-	machineResults map[string]*coremarkResult
+	baseAnalyzer
 }
 
 var _ resultsAnalyzer = &coremarkAnalyzer{}
 
-func newCoremarkAnalyzer() *coremarkAnalyzer {
-	return &coremarkAnalyzer{machineResults: make(map[string]*coremarkResult)}
+func newCoremarkAnalyzer(cloud string) *coremarkAnalyzer {
+	return &coremarkAnalyzer{baseAnalyzer: baseAnalyzer{
+		cloud:          cloud,
+		machineResults: make(map[string]analysisResult),
+	}}
 }
 
 func parseCoremarkLog(p string) (int64, float64, error) {
@@ -631,7 +651,7 @@ func (c *coremarkAnalyzer) analyzeCPU(cloud CloudDetails, machineType string) er
 			return err
 		}
 
-		if res, ok := c.machineResults[machineType]; ok && res.modtime.Sub(info.ModTime()) > 0 {
+		if res, ok := c.machineResults[machineType]; ok && res.ModificationTime().After(info.ModTime()) {
 			log.Printf("Skipping coremark log %q (already analyzed newer)", r)
 			continue
 		}
@@ -655,9 +675,7 @@ func (c *coremarkAnalyzer) analyzeCPU(cloud CloudDetails, machineType string) er
 }
 
 func (c *coremarkAnalyzer) Analyze(cloud CloudDetails) error {
-	if len(c.cloud) == 0 {
-		c.cloud = cloud.Cloud
-	} else if cloud.Cloud != c.cloud {
+	if cloud.Cloud != c.cloud {
 		return fmt.Errorf("expected %s cloud, got %s", c.cloud, cloud.Cloud)
 	}
 
@@ -673,11 +691,12 @@ func (c *coremarkAnalyzer) Close() (err error) {
 	}
 	defer func() { err = f.Close() }()
 
-	fmt.Fprint(f, "Cloud,Date,MachineType,Cores,Single,Multi,Multi/vCPU\n")
-	for machineType, result := range c.machineResults {
+	fmt.Fprintf(f, "%s\n", cpuCSVHeader)
+	for machineType, res := range c.machineResults {
+		result := res.(*coremarkResult)
 		fields := []string{
 			c.cloud,
-			result.modtime.String(),
+			result.ModificationTime().String(),
 			machineType,
 			fmt.Sprintf("%d", result.cores),
 			fmt.Sprintf("%f", result.single),
@@ -686,49 +705,219 @@ func (c *coremarkAnalyzer) Close() (err error) {
 		}
 		fmt.Fprintf(f, "%s\n", strings.Join(fields, ","))
 	}
-	return
+	return nil
 }
 
-const netCSVHeader = ``
+const netCSVHeader = "Cloud,Date,MachineType,Throughput,ThroughputUnits,minLat," +
+	"meanLat,p90Lat,p99Lat,maxLat,latStdDev,txnRate"
+
+type networkResult struct {
+	throughput      float64
+	throughputUnits string
+	minLat          float64
+	meanLat         float64
+	p90Lat          float64
+	p99Lat          float64
+	maxLat          float64
+	latStdDev       float64
+	txnRate         float64
+	modtime         time.Time
+}
+
+// networkResult implements the analysisResult interface.
+func (n *networkResult) ModificationTime() time.Time {
+	return n.modtime
+}
+
+var _ analysisResult = &networkResult{}
 
 type netAnalyzer struct {
+	baseAnalyzer
 }
 
-func newNetAnalyzer() *netAnalyzer {
-	return &netAnalyzer{}
+func newNetAnalyzer(cloud string) *netAnalyzer {
+	return &netAnalyzer{
+		baseAnalyzer: baseAnalyzer{
+			cloud:          cloud,
+			machineResults: make(map[string]analysisResult),
+		},
+	}
 }
 
-func (n *netAnalyzer) Close() error {
-	log.Print("net: Close() unimplemented\n")
+func (n *netAnalyzer) Close() (err error) {
+	f, err := os.OpenFile(ResultsFile("net.csv", n.cloud), os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
+	if err != nil {
+		return err
+	}
+	defer func() { err = f.Close() }()
+
+	fmt.Fprintf(f, "%s\n", netCSVHeader)
+	for machineType, res := range n.machineResults {
+		result := res.(*networkResult)
+		fields := []string{
+			n.cloud,
+			result.ModificationTime().String(),
+			machineType,
+			fmt.Sprintf("%f", result.throughput),
+			result.throughputUnits,
+			fmt.Sprintf("%f", result.minLat),
+			fmt.Sprintf("%f", result.meanLat),
+			fmt.Sprintf("%f", result.p90Lat),
+			fmt.Sprintf("%f", result.p99Lat),
+			fmt.Sprintf("%f", result.maxLat),
+			fmt.Sprintf("%f", result.latStdDev),
+			fmt.Sprintf("%f", result.txnRate),
+		}
+		fmt.Fprintf(f, "%s\n", strings.Join(fields, ","))
+	}
+	return nil
+}
+
+func (n *netAnalyzer) analyzeNetwork(cloud CloudDetails, machineType string) error {
+	glob := path.Join(cloud.LogDir(), FormatMachineType(machineType), "netperf-results.*/success")
+	goodRuns, err := filepath.Glob(glob)
+	if err != nil {
+		return err
+	}
+
+	for _, r := range goodRuns {
+		// Read the netperf-results
+		log.Printf("Analyzing %s", r)
+		info, err := os.Stat(r)
+		if err != nil {
+			return err
+		}
+		if res, ok := n.machineResults[machineType]; ok && res.ModificationTime().After(info.ModTime()) {
+			log.Printf("Skipping network throughput log %q (already analyzed newer", r)
+		}
+		runs, err := filepath.Glob(path.Join(filepath.Dir(r), "netperf-result*"))
+		if err != nil {
+			return err
+		}
+		if len(runs) != 1 {
+			return fmt.Errorf("unexpected number of netperf runs found. expected 1, found %d", len(runs))
+		}
+		run := runs[0]
+		res := &networkResult{
+			modtime: info.ModTime(),
+		}
+		err = parseNetperfThroughput(run, res)
+		if err != nil {
+			return err
+		}
+		err = parseNetperfLatency(run, res)
+		if err != nil {
+			return err
+		}
+		// Do the same for latency below
+		n.machineResults[machineType] = res
+	}
 	return nil
 }
 
 func (n *netAnalyzer) Analyze(cloud CloudDetails) error {
-	log.Print("net: Analyze() unimplemented\n")
+	// Sanity check.
+	if cloud.Cloud != n.cloud {
+		return fmt.Errorf("expected %s cloud, got %s", n.cloud, cloud.Cloud)
+	}
+
+	return forEachMachine(cloud, func(details CloudDetails, machineType string) error {
+		return n.analyzeNetwork(details, machineType)
+	})
+}
+
+func parseNetperfThroughput(p string, res *networkResult) error {
+	// First, extract the last line of the netperf log output and emit the
+	// throughput and the unit, which are the 4th and 5th entry.
+	cmd := exec.Command("sh", "-c",
+		fmt.Sprintf("tail -1 %s | tr -s ' ' | cut -d ' ' -f4,5", p))
+	out, err := cmd.Output()
+	pieces := strings.Split(string(out), " ")
+	if len(pieces) != 2 {
+		return fmt.Errorf("unexpected number of fields found. expected 2, found: %d", len(pieces))
+	}
+
+	res.throughput, err = strconv.ParseFloat(pieces[0], 64)
+	if err != nil {
+		return err
+	}
+	res.throughputUnits = pieces[1]
+	// trim the new line
+	res.throughputUnits = res.throughputUnits[:len(res.throughputUnits)-1]
+	return nil
+}
+
+func parseNetperfLatency(p string, res *networkResult) error {
+	// First, extract the last line of the netperf log output and emit the
+	// throughput and the unit, which are the 4th and 5th entry.
+	cmd := exec.Command("sh", "-c",
+		fmt.Sprintf(" tail -7 %s | head -n 1 | tr -s ' ' | cut -d ' ' -f1-7", p))
+	out, err := cmd.Output()
+	pieces := strings.Split(string(out), " ")
+
+	if len(pieces) != 7 {
+		return fmt.Errorf("unexpected number of fields found. expected 7, found: %d", len(pieces))
+	}
+
+	res.minLat, err = strconv.ParseFloat(pieces[0], 64)
+	if err != nil {
+		return err
+	}
+	res.meanLat, err = strconv.ParseFloat(pieces[1], 64)
+	if err != nil {
+		return err
+	}
+	res.p90Lat, err = strconv.ParseFloat(pieces[2], 64)
+	if err != nil {
+		return err
+	}
+	res.p99Lat, err = strconv.ParseFloat(pieces[3], 64)
+	if err != nil {
+		return err
+	}
+	res.maxLat, err = strconv.ParseFloat(pieces[4], 64)
+	if err != nil {
+		return err
+	}
+	res.latStdDev, err = strconv.ParseFloat(pieces[5], 64)
+	if err != nil {
+		return err
+	}
+	// Last entry has an extra new line
+	res.txnRate, err = strconv.ParseFloat(pieces[6][:len(pieces[6])-1], 64)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
 var _ resultsAnalyzer = &netAnalyzer{}
 
 func analyzeResults(clouds []CloudDetails) {
-	cpu := newCoremarkAnalyzer()
+	if len(clouds) == 0 {
+		log.Printf("nothing to analyze")
+		return
+	}
+
+	cloudName := clouds[0].Cloud
+	cpu := newCoremarkAnalyzer(cloudName)
 	defer cpu.Close()
 
-	net := newNetAnalyzer()
+	net := newNetAnalyzer(cloudName)
 	defer net.Close()
 
 	fio := newFioAnalyzer()
 	defer fio.Close()
 
 	// Generate scripts.
-	for _, cloud := range clouds {
-		if err := cpu.Analyze(cloud); err != nil {
+	for _, cloudDetail := range clouds {
+		if err := cpu.Analyze(cloudDetail); err != nil {
 			panic(err)
 		}
-		if err := net.Analyze(cloud); err != nil {
+		if err := net.Analyze(cloudDetail); err != nil {
 			panic(err)
 		}
-		if err := fio.Analyze(cloud); err != nil {
+		if err := fio.Analyze(cloudDetail); err != nil {
 			panic(err)
 		}
 	}
