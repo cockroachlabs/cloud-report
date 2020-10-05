@@ -5,24 +5,24 @@
         "machineTypes": {
             "n2-standard-16": null,
             "n2d-standard-16": {
-                "gce-zones": "us-east1-b"
+                "gce-zones": "us-east4-c"
             },
             "n2-highmem-16": null,
             "n2-highcpu-16": null,
             "n2d-highcpu-16": {
-                "gce-zones": "us-east1-b"
+                "gce-zones": "us-east4-c"
             },
             "c2-standard-16": null,
             "m1-ultramem-40":  null,
             "n2-highmem-16":  null,
             "n2d-highmem-16": {
-                "gce-zones": "us-east1-b"
+                "gce-zones": "us-east4-c"
             }
         },
         "roachprodArgs": {
             "local-ssd": null,
             "gce-image": "ubuntu-1804-bionic-v20200923",
-            "gce-zones": "us-east4-b",
+            "gce-zones": "us-east4-c",
             "local-ssd-no-ext4-barrier": null
         }
     },
@@ -43,7 +43,7 @@
         "roachprodArgs": {
             "local-ssd": "false",
             "gce-image": "ubuntu-1804-bionic-v20200923",
-            "gce-zones": "us-east1-c",
+            "gce-zones": "us-east4-c",
             "gce-pd-volume-type": "pd-ssd",
             "gce-pd-volume-size": "500"
         }

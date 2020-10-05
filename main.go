@@ -457,6 +457,7 @@ func ioStatsCSV(s *ioStats) []string {
 
 type fioJob struct {
 	Name       string             `json:"jobname"`
+	Opts       map[string]string  `json:"job options"`
 	ReadStats  ioStats            `json:"read"`
 	WriteStats ioStats            `json:"write"`
 	LatNS      map[string]float64 `json:"latency_ns"`
@@ -469,9 +470,16 @@ type fioResults struct {
 	Jobs      []fioJob `json:"jobs"`
 }
 
-const fioResultsCSVHeader = `Cloud,Group,Machine,Date,Job,RdIOPs,RdIOP/s,RdBytes,RdBW(KiB/s),RdlMin,RdlMax,RdlMean,RdlStd,Rd90,Rd95,Rd99,Rd99.9,Rd99.99,WrIOPs,WrIOP/s,WrBytes,WrBW(KiB/s),WrlMin,WrlMax,WrlMean,WrlStd,Wr90,Wr95,Wr99,Wr99.9,Wr99.99,`
+const fioResultsCSVHeader = `Cloud,Group,Machine,Date,Job,Workload,BS,IoDepth,RdIOPs,RdIOP/s,RdBytes,RdBW(KiB/s),RdlMin,RdlMax,RdlMean,RdlStd,Rd90,Rd95,Rd99,Rd99.9,Rd99.99,WrIOPs,WrIOP/s,WrBytes,WrBW(KiB/s),WrlMin,WrlMax,WrlMean,WrlStd,Wr90,Wr95,Wr99,Wr99.9,Wr99.99,`
 
 func (r *fioResults) CSV(cloud CloudDetails, machineType string, wr io.Writer) {
+	iodepth := func(o map[string]string) string {
+		if d, ok := o["iodepth"]; ok {
+			return d
+		}
+		return "1"
+	}
+
 	for _, j := range r.Jobs {
 		fields := []string{
 			cloud.Cloud,
@@ -479,6 +487,9 @@ func (r *fioResults) CSV(cloud CloudDetails, machineType string, wr io.Writer) {
 			machineType,
 			time.Unix(r.Timestamp, 0).String(),
 			j.Name,
+			fmt.Sprintf("%s-%s-%s", j.Opts["rw"], j.Opts["bs"], j.Opts["ioengine"]),
+			j.Opts["bs"],
+			iodepth(j.Opts),
 		}
 		fields = append(fields, ioStatsCSV(&j.ReadStats)...)
 		fields = append(fields, ioStatsCSV(&j.WriteStats)...)
@@ -494,19 +505,34 @@ func analyzeFIO(cloud CloudDetails, machineType string, wr io.Writer) error {
 		return err
 	}
 
+	latest := struct {
+		res     fioResults
+		modtime time.Time
+	}{}
+
 	for _, r := range goodRuns {
 		// Read fio-results
+		info, err := os.Stat(r)
+		if err != nil {
+			return err
+		}
+
 		log.Printf("Analyzing %s", r)
+		if latest.modtime.After(info.ModTime()) {
+			log.Printf("--Skipping coremark log %q (already analyzed newer)", r)
+			continue
+		}
+
+		latest.modtime = info.ModTime()
 		data, err := ioutil.ReadFile(path.Join(filepath.Dir(r), "fio-results.json"))
 		if err != nil {
 			return err
 		}
-		res := &fioResults{}
-		if err := json.Unmarshal(data, res); err != nil {
+		if err := json.Unmarshal(data, &latest.res); err != nil {
 			return err
 		}
-		res.CSV(cloud, machineType, wr)
 	}
+	latest.res.CSV(cloud, machineType, wr)
 	return nil
 }
 
