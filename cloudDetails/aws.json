@@ -78,9 +78,10 @@
     },
     "roachprodArgs" : {
       "aws-ebs-volume-type": "io2",
-      "aws-zones": "us-east-1a",
+      "aws-zones": "us-east-2a",
       "aws-image-ami": "ami-013da1cc4ae87618c",
-      "local-ssd": "false"
+      "local-ssd": "false",
+      "aws-ebs-iops": "20000"
     }
   }
 ]
