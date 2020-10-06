@@ -143,13 +143,16 @@ type fioJob struct {
 }
 
 type fioResults struct {
-	Timestamp int64    `json:"timestamp"`
-	Jobs      []fioJob `json:"jobs"`
+	Timestamp   int64    `json:"timestamp"`
+	Jobs        []fioJob `json:"jobs"`
+	modtime     time.Time
+	machinetype string
+	disktype    string
 }
 
 const fioResultsCSVHeader = `Cloud,Group,Machine,Date,Job,Workload,BS,IoDepth,RdIOPs,RdIOP/s,RdBytes,RdBW(KiB/s),RdlMin,RdlMax,RdlMean,RdlStd,Rd90,Rd95,Rd99,Rd99.9,Rd99.99,WrIOPs,WrIOP/s,WrBytes,WrBW(KiB/s),WrlMin,WrlMax,WrlMean,WrlStd,Wr90,Wr95,Wr99,Wr99.9,Wr99.99,`
 
-func (r *fioResults) CSV(cloud CloudDetails, machineType string, wr io.Writer) {
+func (r *fioResults) CSV(cloud string, wr io.Writer) {
 	iodepth := func(o map[string]string) string {
 		if d, ok := o["iodepth"]; ok {
 			return d
@@ -159,9 +162,9 @@ func (r *fioResults) CSV(cloud CloudDetails, machineType string, wr io.Writer) {
 
 	for _, j := range r.Jobs {
 		fields := []string{
-			cloud.Cloud,
-			cloud.Group,
-			machineType,
+			cloud,
+			r.disktype,
+			r.machinetype,
 			time.Unix(r.Timestamp, 0).String(),
 			j.Name,
 			fmt.Sprintf("%s-%s-%s", j.Opts["rw"], j.Opts["bs"], j.Opts["ioengine"]),
@@ -174,7 +177,7 @@ func (r *fioResults) CSV(cloud CloudDetails, machineType string, wr io.Writer) {
 	}
 }
 
-func analyzeFIO(cloud CloudDetails, machineType string, wr io.Writer) error {
+func (f *fioAnalyzer) analyzeFIO(cloud CloudDetails, machineType string) error {
 	// Find successful FIO runs (those that have success file)
 	glob := path.Join(cloud.LogDir(), FormatMachineType(machineType), "fio-results.*/success")
 	goodRuns, err := filepath.Glob(glob)
@@ -182,10 +185,10 @@ func analyzeFIO(cloud CloudDetails, machineType string, wr io.Writer) error {
 		return err
 	}
 
-	latest := struct {
-		res     fioResults
-		modtime time.Time
-	}{}
+	latest := &fioResults{
+		machinetype: machineType,
+		disktype:    cloud.Group,
+	}
 
 	for _, r := range goodRuns {
 		// Read fio-results
@@ -205,11 +208,12 @@ func analyzeFIO(cloud CloudDetails, machineType string, wr io.Writer) error {
 		if err != nil {
 			return err
 		}
-		if err := json.Unmarshal(data, &latest.res); err != nil {
+		if err := json.Unmarshal(data, &latest); err != nil {
 			return err
 		}
 	}
-	latest.res.CSV(cloud, machineType, wr)
+
+	f.results[fmt.Sprintf("%s-%s", machineType, cloud.Group)] = latest
 	return nil
 }
 
@@ -225,15 +229,29 @@ func forEachMachine(cloud CloudDetails, fn analyzeFn) error {
 }
 
 type fioAnalyzer struct {
+	cloud   string
+	results map[string]*fioResults
 }
 
 var _ resultsAnalyzer = &fioAnalyzer{}
 
-func newFioAnalyzer() *fioAnalyzer {
-	return &fioAnalyzer{}
+func newFioAnalyzer(cloud string) resultsAnalyzer {
+	return &fioAnalyzer{
+		cloud:   cloud,
+		results: make(map[string]*fioResults)}
 }
 
 func (f *fioAnalyzer) Close() error {
+	wr, err := os.OpenFile(ResultsFile("fio.csv", f.cloud), os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
+	if err != nil {
+		return err
+	}
+	defer wr.Close()
+
+	fmt.Fprintf(wr, "%s\n", fioResultsCSVHeader)
+	for _, res := range f.results {
+		res.CSV(f.cloud, wr)
+	}
 	return nil
 }
 
@@ -247,19 +265,8 @@ func ResultsFile(fname string, subdirs ...string) string {
 }
 
 func (f *fioAnalyzer) Analyze(cloud CloudDetails) error {
-	// FIO emits results per group.
-	wr, err := os.OpenFile(ResultsFile("fio.csv", cloud.Cloud, cloud.Group),
-		os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
-	if err != nil {
-		return err
-	}
-	defer wr.Close()
-
-	fmt.Fprintf(wr, "%s\n", fioResultsCSVHeader)
-
 	return forEachMachine(cloud, func(details CloudDetails, machineType string) error {
-		err = analyzeFIO(details, machineType, wr)
-		return err
+		return f.analyzeFIO(details, machineType)
 	})
 }
 
@@ -596,7 +603,7 @@ func analyzeResults() error {
 	net := newPerCloudAnalyzer(newNetAnalyzer)
 	defer net.Close()
 
-	fio := newFioAnalyzer()
+	fio := newPerCloudAnalyzer(newFioAnalyzer)
 	defer fio.Close()
 
 	// Generate scripts.

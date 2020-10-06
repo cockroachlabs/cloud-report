@@ -26,7 +26,8 @@
       "aws-machine-type-ssd": "{{.MachineType}}",
       "aws-zones": "us-east-1a",
       "aws-image-ami": "ami-013da1cc4ae87618c",
-      "local-ssd-no-ext4-barrier": null
+      "local-ssd-no-ext4-barrier": null,
+      "aws-enable-multiple-stores": null
     }
   },
   {
@@ -53,7 +54,8 @@
       "aws-ebs-volume-type": "gp2",
       "aws-zones": "us-east-1a",
       "aws-image-ami": "ami-013da1cc4ae87618c",
-      "local-ssd": "false"
+      "local-ssd": "false",
+      "aws-enable-multiple-stores": null
     }
   },
   {
@@ -81,7 +83,8 @@
       "aws-zones": "us-east-2a",
       "aws-image-ami": "ami-013da1cc4ae87618c",
       "local-ssd": "false",
-      "aws-ebs-iops": "20000"
+      "aws-ebs-iops": "20000",
+      "aws-enable-multiple-stores": null
     }
   }
 ]
