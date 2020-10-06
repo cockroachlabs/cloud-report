@@ -12,11 +12,11 @@ package cmd
 import (
 	"bytes"
 	"fmt"
-	"html/template"
 	"os"
 	"path"
 	"regexp"
 	"strings"
+	"text/template"
 	"time"
 
 	"github.com/spf13/cobra"
