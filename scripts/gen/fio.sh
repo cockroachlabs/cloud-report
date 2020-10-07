@@ -39,11 +39,16 @@ then
   exit
 fi
 
-# Dir specifies directory to store files
-# and thus the *disk* to benchmark.
-fiodir=/mnt/data1/fio
+# We will benchmark *disk* which is mounted as /mnt/data1
+#
+# !!! WARNING !!!
+#    THIS WILL DESTROY DATA ON THE DISK ***
+# !!! WARNING !!!
+DEV=$(lsblk | grep /mnt/data1|cut -d" " -f1)
 
-trap "rm -f $pidfile; sudo rm -rf $fiodir" EXIT SIGINT
+# Unmount /mnt/data1 -- the disk we will benchmark; remount when benchmark completes.
+sudo umount /mnt/data1
+trap "rm -f $pidfile; sudo mkfs.ext4 -F /dev/$DEV && sudo mount /mnt/data1" EXIT SIGINT
 echo $$ > "$pidfile"
 
 # Remove processed options.  Remaining ones assumed to be FIO specific flags.
@@ -54,15 +59,36 @@ mkdir "$logdir"
 report="${logdir}/fio-results.json"
 exec &> >(tee -a "$logdir/script.log")
 
-# Dump lsblk and df information (to make sure we have the right disks)
+# Dump lsblk and df information (sanity check to make sure we have the right disks)
 lsblk
 df -h
 
-# Uncomment if you want to regenerate test files.
-# rm -rf /mnt/data1/fio
-sudo mkdir -p "$fiodir"
+# Configure FIO with parameters dependent on the type of the disk (SSD vs attached)
+case "$DEV" in
+  nvme*)
+    depth_multiplier=16
+    latency_target_ms='10'
+    latency_pctl=99
+  ;;
+  *)
+    depth_multiplier=1
+    latency_target_ms='1000'
+    latency_pctl=95
+  ;;
+esac
+
+# Bandwidth benchmarks use large (1MB) block size, and run with iodepth_bw depth.
+iodepth_bw=$((depth_multiplier * 64))
+# IOPs benchmarks use default block size (4KB), and run with very large depth.
+iodepth_iops=$((depth_multiplier * 256))
+# Latency benchmarks use 4KB block size.  IO depth is small to ensure that
+# we do not saturate device bandwidth.  If bandwidth is saturated, latency increases.
+iodepth_latency=$((depth_multiplier * 4))
 
 cd "$(dirname $0)"
-sudo cgexec -g memory:group1 fio --output="$report" --output-format=json "$@" ./fio.cfg
+sudo \
+   env IODEPTH_BW=$iodepth_bw IODEPTH_IOPS=$iodepth_iops IODEPTH_LATENCY=$iodepth_latency \
+       LATENCY_TARGET="${latency_target_ms}ms" LATENCY_WINDOW="$((latency_target_ms * 10))ms" LATENCY_PCTL=$latency_pctl \
+   fio --filename="/dev/$DEV" --output="$report" --output-format=json "$@" ./fio.cfg
 
 touch "$logdir/success"

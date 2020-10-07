@@ -133,13 +133,17 @@ func ioStatsCSV(s *ioStats) []string {
 }
 
 type fioJob struct {
-	Name       string             `json:"jobname"`
-	Opts       map[string]string  `json:"job options"`
-	ReadStats  ioStats            `json:"read"`
-	WriteStats ioStats            `json:"write"`
-	LatNS      map[string]float64 `json:"latency_ns"`
-	LatUS      map[string]float64 `json:"latency_us"`
-	LatMS      map[string]float64 `json:"latency_ms"`
+	Name         string             `json:"jobname"`
+	Opts         map[string]string  `json:"job options"`
+	ReadStats    ioStats            `json:"read"`
+	WriteStats   ioStats            `json:"write"`
+	LatNS        map[string]float64 `json:"latency_ns"`
+	LatUS        map[string]float64 `json:"latency_us"`
+	LatMS        map[string]float64 `json:"latency_ms"`
+	LatDepth     float64            `json:"latency_depth"`
+	LatTargetUS  int64              `json:"latency_target"`
+	LatTargetPct float64            `json:"latency_percentile"`
+	LatWindowUS  int64              `json:"latency_window"`
 }
 
 type fioResults struct {
@@ -150,7 +154,10 @@ type fioResults struct {
 	disktype    string
 }
 
-const fioResultsCSVHeader = `Cloud,Group,Machine,Date,Job,Workload,BS,IoDepth,RdIOPs,RdIOP/s,RdBytes,RdBW(KiB/s),RdlMin,RdlMax,RdlMean,RdlStd,Rd90,Rd95,Rd99,Rd99.9,Rd99.99,WrIOPs,WrIOP/s,WrBytes,WrBW(KiB/s),WrlMin,WrlMax,WrlMean,WrlStd,Wr90,Wr95,Wr99,Wr99.9,Wr99.99,`
+const fioResultsCSVHeader = `Cloud,Group,Machine,Date,Job,BS,IoDepth,` +
+	`RdIOPs,RdIOP/s,RdBytes,RdBW(KiB/s),RdlMin,RdlMax,RdlMean,RdlStd,Rd90,Rd95,Rd99,Rd99.9,Rd99.99,` +
+	`WrIOPs,WrIOP/s,WrBytes,WrBW(KiB/s),WrlMin,WrlMax,WrlMean,WrlStd,Wr90,Wr95,Wr99,Wr99.9,Wr99.99,` +
+	`LatDepth,LatTarget,LatTargetPct,LatWindow`
 
 func (r *fioResults) CSV(cloud string, wr io.Writer) {
 	iodepth := func(o map[string]string) string {
@@ -167,12 +174,17 @@ func (r *fioResults) CSV(cloud string, wr io.Writer) {
 			r.machinetype,
 			time.Unix(r.Timestamp, 0).String(),
 			j.Name,
-			fmt.Sprintf("%s-%s-%s", j.Opts["rw"], j.Opts["bs"], j.Opts["ioengine"]),
 			j.Opts["bs"],
 			iodepth(j.Opts),
 		}
 		fields = append(fields, ioStatsCSV(&j.ReadStats)...)
 		fields = append(fields, ioStatsCSV(&j.WriteStats)...)
+		fields = append(fields, []string{
+			fmt.Sprintf("%.2f", j.LatDepth),
+			fmt.Sprintf("%d", j.LatTargetUS),
+			fmt.Sprintf("%.2f", j.LatTargetPct),
+			fmt.Sprintf("%d", j.LatWindowUS),
+		}...)
 		fmt.Fprintf(wr, "%s\n", strings.Join(fields, ","))
 	}
 }
