@@ -23,7 +23,7 @@
             "local-ssd": null,
             "gce-image": "ubuntu-1804-bionic-v20200923",
             "gce-zones": "us-east4-c",
-            "local-ssd-no-ext4-barrier": null
+            "local-ssd-no-ext4-barrier": "false"
         }
     },
     {
@@ -45,7 +45,7 @@
             "gce-image": "ubuntu-1804-bionic-v20200923",
             "gce-zones": "us-east4-c",
             "gce-pd-volume-type": "pd-ssd",
-            "gce-pd-volume-size": "500"
+            "gce-pd-volume-size": "2500"
         }
     }
 ]
