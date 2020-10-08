@@ -190,6 +190,7 @@ f_resume=''
 do_create=''
 do_upload=''
 do_setup=''
+do_destroy=''
 io_extra_args=''
 cpu_extra_args=''
 net_extra_args=''
@@ -218,9 +219,7 @@ while getopts 'b:w:dI:N:C:T:r' flag; do
          *) usage "Invalid -w value '${OPTARG}'";;
        esac
     ;;
-    d) destroy_cluster
-       exit 0
-    ;;
+    d) do_destroy='true' ;;
     r) f_resume='true' ;;
     I) io_extra_args="${OPTARG}" ;;
     C) cpu_extra_args="${OPTARG}" ;;
@@ -261,6 +260,11 @@ do
   fetch="fetch_${bench}_results"
   $fetch
 done
+
+if [ -n "$do_destroy" ];
+then 
+  destroy_cluster
+fi
 `
 
 // combineArgs takes base arguments applicable to the cloud and machine specific
