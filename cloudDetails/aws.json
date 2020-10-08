@@ -82,10 +82,10 @@
     "roachprodArgs" : {
       "aws-ebs-volume-type": "io2",
       "aws-ebs-volume-size": "2500",
-      "aws-zones": "us-east-2a",
+      "aws-zones": "us-east-1a",
       "aws-image-ami": "ami-013da1cc4ae87618c",
       "local-ssd": "false",
-      "aws-ebs-iops": "32000",
+      "aws-ebs-iops": "20000",
       "aws-enable-multiple-stores": null
     }
   }
