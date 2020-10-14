@@ -14,9 +14,9 @@
       "Standard_16ms": null
     },
     "roachprodArgs": {
-      "local-ssd": null,
+      "local-ssd": "true",
       "azure-locations": "eastus",
-      "local-ssd-no-ext4-barrier": null
+      "local-ssd-no-ext4-barrier": "false"
    }
   }
 ]
