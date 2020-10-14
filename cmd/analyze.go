@@ -504,6 +504,7 @@ func (n *netAnalyzer) analyzeNetwork(cloud CloudDetails, machineType string) err
 		}
 		if res, ok := n.machineResults[machineType]; ok && res.modtime.After(info.ModTime()) {
 			log.Printf("Skipping network throughput log %q (already analyzed newer", r)
+			continue
 		}
 		runs, err := filepath.Glob(path.Join(filepath.Dir(r), "netperf-result*"))
 		if err != nil {
@@ -608,6 +609,154 @@ func parseNetperfLatency(p string, res *networkResult) error {
 
 var _ resultsAnalyzer = &netAnalyzer{}
 
+type tpccResult struct {
+	tpmC, efc, avg, p50, p90, p95, p99, pMax float64
+	pass                                     bool
+	modtime                                  time.Time
+}
+type tpccAnalyzer struct {
+	machineResults map[string]*tpccResult
+	cloud          string
+}
+
+func newTPCCAnalyzer(cloud string) resultsAnalyzer {
+	return &tpccAnalyzer{
+		cloud:          cloud,
+		machineResults: make(map[string]*tpccResult),
+	}
+}
+
+const tpccCSVHeader = "Cloud,Date,MachineType,Pass,TpmC,Efc,Avg,P50,P95,P99,PMax"
+
+func (t *tpccAnalyzer) Close() error {
+	f, err := os.OpenFile(ResultsFile("tpcc.csv", t.cloud), os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
+	if err != nil {
+		return err
+	}
+	defer func() { err = f.Close() }()
+
+	fmt.Fprintf(f, "%s\n", tpccCSVHeader)
+	for machineType, res := range t.machineResults {
+		fields := []string{
+			t.cloud,
+			res.modtime.String(),
+			machineType,
+			fmt.Sprintf("%t", res.pass),
+			fmt.Sprintf("%f", res.tpmC),
+			fmt.Sprintf("%f", res.efc),
+			fmt.Sprintf("%f", res.avg),
+			fmt.Sprintf("%f", res.p50),
+			fmt.Sprintf("%f", res.p95),
+			fmt.Sprintf("%f", res.p99),
+			fmt.Sprintf("%f", res.pMax),
+		}
+		fmt.Fprintf(f, "%s\n", strings.Join(fields, ","))
+	}
+	return nil
+}
+
+func parseTPCCResult(p string, res *tpccResult) error {
+	// _elapsed_______tpmC____efc__avg(ms)__p50(ms)__p90(ms)__p95(ms)__p99(ms)_pMax(ms)
+	//  900.0s    30733.3  95.6%    180.8    167.8    369.1    419.4    570.4   1677.7
+	cmd := exec.Command("tail", "-1", p)
+	out, err := cmd.Output()
+	pieces := strings.Fields(string(out))
+
+	if len(pieces) != 9 {
+		return fmt.Errorf("unexpected number of fields found. expected 7, found: %d", len(pieces))
+	}
+
+	res.tpmC, err = strconv.ParseFloat(pieces[1], 64)
+	if err != nil {
+		return err
+	}
+	// Strip '%'
+	res.efc, err = strconv.ParseFloat(pieces[2][:len(pieces[2])-1], 64)
+	if err != nil {
+		return err
+	}
+	res.avg, err = strconv.ParseFloat(pieces[3], 64)
+	if err != nil {
+		return err
+	}
+	res.p50, err = strconv.ParseFloat(pieces[4], 64)
+	if err != nil {
+		return err
+	}
+	res.p90, err = strconv.ParseFloat(pieces[5], 64)
+	if err != nil {
+		return err
+	}
+	res.p95, err = strconv.ParseFloat(pieces[6], 64)
+	if err != nil {
+		return err
+	}
+	res.p99, err = strconv.ParseFloat(pieces[7], 64)
+	if err != nil {
+		return err
+	}
+	// Last entry has an extra new line
+	res.pMax, err = strconv.ParseFloat(pieces[8][:len(pieces[8])-1], 64)
+	if err != nil {
+		return err
+	}
+	res.pass = res.p90 <= 5000.0
+	return nil
+}
+
+func (t *tpccAnalyzer) analyzeTPCC(cloud CloudDetails, machineType string) error {
+	glob := path.Join(cloud.LogDir(), FormatMachineType(machineType), "tpcc-results.*/success")
+	goodRuns, err := filepath.Glob(glob)
+	if err != nil {
+		return err
+	}
+
+	for _, r := range goodRuns {
+		// Read the tpcc-results
+		log.Printf("Analyzing %s", r)
+		info, err := os.Stat(r)
+		if err != nil {
+			return err
+		}
+		if res, ok := t.machineResults[machineType]; ok && res.modtime.After(info.ModTime()) {
+			log.Printf("Skipping TPC-C throughput log %q (already analyzed newer", r)
+			continue
+		}
+		runs, err := filepath.Glob(path.Join(filepath.Dir(r), "tpcc-result*"))
+		if err != nil {
+			return err
+		}
+		if len(runs) != 1 {
+			return fmt.Errorf("unexpected number of netperf runs found. expected 1, found %d", len(runs))
+		}
+		run := runs[0]
+		res := &tpccResult{
+			modtime: info.ModTime(),
+		}
+
+		err = parseTPCCResult(run, res)
+		if err != nil {
+			return err
+		}
+		// Do the same for latency below
+		t.machineResults[machineType] = res
+	}
+	return nil
+}
+
+func (t *tpccAnalyzer) Analyze(cloud CloudDetails) error {
+	// Sanity check.
+	if cloud.Cloud != t.cloud {
+		return fmt.Errorf("expected %s cloud, got %s", t.cloud, cloud.Cloud)
+	}
+
+	return forEachMachine(cloud, func(details CloudDetails, machineType string) error {
+		return t.analyzeTPCC(details, machineType)
+	})
+}
+
+var _ resultsAnalyzer = &tpccAnalyzer{}
+
 func analyzeResults() error {
 	cpu := newPerCloudAnalyzer(newCoremarkAnalyzer)
 	defer cpu.Close()
@@ -618,6 +767,9 @@ func analyzeResults() error {
 	fio := newPerCloudAnalyzer(newFioAnalyzer)
 	defer fio.Close()
 
+	tpcc := newPerCloudAnalyzer(newTPCCAnalyzer)
+	defer tpcc.Close()
+
 	// Generate scripts.
 	for _, cloudDetail := range clouds {
 		if err := cpu.Analyze(cloudDetail); err != nil {
@@ -627,6 +779,9 @@ func analyzeResults() error {
 			return err
 		}
 		if err := fio.Analyze(cloudDetail); err != nil {
+			return err
+		}
+		if err := tpcc.Analyze(cloudDetail); err != nil {
 			return err
 		}
 	}

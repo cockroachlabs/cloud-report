@@ -86,6 +86,25 @@ function upload_scripts() {
   roachprod run "$CLUSTER" chmod -- -R +x ./scripts
 }
 
+# Start cockroach cluster on nodes [1-3].
+function start_cockroach() {
+  if [ -z "$cockroach_binary" ]
+  then
+    roachprod stage "$CLUSTER" cockroach
+  else
+    roachprod put "$CLUSTER" "$cockroach_binary" "cockroach"
+  fi
+
+  # Build --store flags based on the number of disks.
+  # Roachprod adds /mnt/data1/cockroach by itself, so, we'll pick up the other disks
+  for s in $(roachprod run "$CLUSTER":1 'ls -1d /mnt/data[2-9]*')
+  do
+   stores="$stores --store $s/cockroach"
+  done
+
+	roachprod start "$CLUSTER":1-$((NODES-1)) --args="$stores --cache=0.25 --max-sql-memory=0.4" 
+}
+
 # Execute setup.sh script on the cluster to configure it
 function setup_cluster() {
 	roachprod run "$CLUSTER" sudo ./scripts/gen/setup.sh "$CLOUD"
@@ -149,11 +168,13 @@ function fetch_bench_net_results() {
 
 # Run TPCC Benchmark
 function bench_tpcc() {
-  echo "IMPLEMENT4 ME" $tpcc_extra_args
+ pgurls=$(roachprod pgurl "$CLUSTER":1-$((NODES-1)))
+ run_under_tmux "tpcc" "$CLUSTER:4" "./scripts/gen/tpcc.sh $tpcc_extra_args ${pgurls[@]}"
 }
 
 function fetch_bench_tpcc_results() {
-  echo "Implement me"
+  roachprod run "$CLUSTER":4 ./scripts/gen/tpcc.sh -- -w
+  roachprod get "$CLUSTER":4 ./tpcc-results $(results_dir "tpcc-results")	
 }
 
 # Destroy roachprod cluster
@@ -163,11 +184,12 @@ function destroy_cluster() {
 
 function usage() {
 echo "$1
-Usage: $0 [-b <bootstrap>]... [-w <workload>]... [-d]
+Usage: $0 [-b <bootstrap>]... [-w <workload>]... [-d] [-c cockroach_binary]
    -b: One or more bootstrap steps.
          -b create: creates cluster
          -b upload: uploads required scripts
          -b setup: execute setup script on the cluster
+         -b cockroach: start cockroach
          -b all: all of the above steps
    -w: Specify workloads (benchmarks) to execute.
        -w cpu : Benchmark CPU
@@ -175,6 +197,7 @@ Usage: $0 [-b <bootstrap>]... [-w <workload>]... [-d]
        -w net : Benchmark Net
        -w tpcc: Benchmark TPCC
        -w all : All of the above
+   -c: Override cockroach binary to use.
    -r: Do not start benchmarks specified by -w.  Instead, resume waiting for their completion.
    -I: additional IO benchmark arguments
    -N: additional network benchmark arguments
@@ -190,26 +213,31 @@ f_resume=''
 do_create=''
 do_upload=''
 do_setup=''
+do_cockroach=''
 do_destroy=''
 io_extra_args=''
 cpu_extra_args=''
 net_extra_args=''
 tpcc_extra_args=''
+cockroach_binary=''
 
-while getopts 'b:w:dI:N:C:T:r' flag; do
+while getopts 'c:b:w:dI:N:C:T:r' flag; do
   case "${flag}" in
     b) case "${OPTARG}" in
         all)
           do_create='true'
           do_upload='true'
           do_setup='true'
+          do_cockroach='true'
         ;;
-        create) do_create='true' ;;
-        upload) do_upload='true' ;;
-        setup)  do_setup='true' ;;
+        create)    do_create='true' ;;
+        upload)    do_upload='true' ;;
+        setup)     do_setup='true' ;;
+        cockroach) do_cockroach='true' ;;
         *) usage "Invalid -b value '${OPTARG}'" ;;
        esac
     ;;
+    c) cockroach_binary="${OPTARG}" ;;
     w) case "${OPTARG}" in
          cpu) benchmarks+=("bench_cpu") ;;
          io) benchmarks+=("bench_io") ;;
@@ -242,6 +270,12 @@ fi
 if [ -n "$do_setup" ];
 then
   setup_cluster
+fi
+
+
+if [ -n "$do_cockroach" ];
+then
+  start_cockroach
 fi
 
 if [ -z "$f_resume" ]
