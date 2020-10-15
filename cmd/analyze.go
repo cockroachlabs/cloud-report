@@ -613,6 +613,7 @@ type tpccResult struct {
 	tpmC, efc, avg, p50, p90, p95, p99, pMax float64
 	pass                                     bool
 	modtime                                  time.Time
+	machine, disktype                        string
 }
 type tpccAnalyzer struct {
 	machineResults map[string]*tpccResult
@@ -626,7 +627,7 @@ func newTPCCAnalyzer(cloud string) resultsAnalyzer {
 	}
 }
 
-const tpccCSVHeader = "Cloud,Date,MachineType,Pass,TpmC,Efc,Avg,P50,P95,P99,PMax"
+const tpccCSVHeader = "Cloud,Group,Date,MachineType,Pass,TpmC,Efc,Avg,P50,P95,P99,PMax"
 
 func (t *tpccAnalyzer) Close() error {
 	f, err := os.OpenFile(ResultsFile("tpcc.csv", t.cloud), os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
@@ -636,11 +637,12 @@ func (t *tpccAnalyzer) Close() error {
 	defer func() { err = f.Close() }()
 
 	fmt.Fprintf(f, "%s\n", tpccCSVHeader)
-	for machineType, res := range t.machineResults {
+	for _, res := range t.machineResults {
 		fields := []string{
 			t.cloud,
+			res.disktype,
 			res.modtime.String(),
-			machineType,
+			res.machine,
 			fmt.Sprintf("%t", res.pass),
 			fmt.Sprintf("%f", res.tpmC),
 			fmt.Sprintf("%f", res.efc),
@@ -718,7 +720,8 @@ func (t *tpccAnalyzer) analyzeTPCC(cloud CloudDetails, machineType string) error
 		if err != nil {
 			return err
 		}
-		if res, ok := t.machineResults[machineType]; ok && res.modtime.After(info.ModTime()) {
+		k := fmt.Sprintf("%s-%s", cloud.Group, machineType)
+		if res, ok := t.machineResults[k]; ok && res.modtime.After(info.ModTime()) {
 			log.Printf("Skipping TPC-C throughput log %q (already analyzed newer", r)
 			continue
 		}
@@ -731,7 +734,9 @@ func (t *tpccAnalyzer) analyzeTPCC(cloud CloudDetails, machineType string) error
 		}
 		run := runs[0]
 		res := &tpccResult{
-			modtime: info.ModTime(),
+			modtime:  info.ModTime(),
+			disktype: cloud.Group,
+			machine:  machineType,
 		}
 
 		err = parseTPCCResult(run, res)
@@ -739,7 +744,7 @@ func (t *tpccAnalyzer) analyzeTPCC(cloud CloudDetails, machineType string) error
 			return err
 		}
 		// Do the same for latency below
-		t.machineResults[machineType] = res
+		t.machineResults[k] = res
 	}
 	return nil
 }
