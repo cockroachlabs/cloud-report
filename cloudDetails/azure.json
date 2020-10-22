@@ -11,11 +11,12 @@
       "Standard_E16ds_v4": null,
       "Standard_E16as_v4":  null,
       "Standard_L16s_v2": null,
-      "Standard_16ms": null
+      "Standard_M16ms": null
     },
     "roachprodArgs": {
       "local-ssd": "true",
       "azure-locations": "eastus",
+      "azure-availability-zone": "2",
       "local-ssd-no-ext4-barrier": "false"
    }
   }
