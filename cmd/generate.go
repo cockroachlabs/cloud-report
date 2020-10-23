@@ -12,6 +12,7 @@ package cmd
 import (
 	"bytes"
 	"fmt"
+	"hash/crc32"
 	"os"
 	"path"
 	"regexp"
@@ -88,6 +89,7 @@ function upload_scripts() {
 
 # Start cockroach cluster on nodes [1-3].
 function start_cockroach() {
+  roachprod run "$CLUSTER" "rm -f ./cockroach"
   if [ -z "$cockroach_binary" ]
   then
     roachprod stage "$CLUSTER" cockroach
@@ -97,7 +99,7 @@ function start_cockroach() {
 
   # Build --store flags based on the number of disks.
   # Roachprod adds /mnt/data1/cockroach by itself, so, we'll pick up the other disks
-  for s in $(roachprod run "$CLUSTER":1 'ls -1d /mnt/data[2-9]*')
+  for s in $(roachprod run "$CLUSTER":1 'ls -1d /mnt/data[2-9]* 2>/dev/null || echo')
   do
    stores="$stores --store $s/cockroach"
   done
@@ -333,6 +335,14 @@ func FormatMachineType(m string) string {
 	return strings.Replace(m, ".", "-", -1)
 }
 
+func hashStrings(vals ...string) uint32 {
+	hasher := crc32.NewIEEE()
+	for _, v := range vals {
+		_, _ = hasher.Write([]byte(v))
+	}
+	return hasher.Sum32()
+}
+
 func generateCloudScripts(cloud CloudDetails) error {
 	if err := makeAllDirs(cloud.BasePath(), cloud.ScriptDir(), cloud.LogDir()); err != nil {
 		return err
@@ -340,8 +350,10 @@ func generateCloudScripts(cloud CloudDetails) error {
 
 	scriptTemplate := template.Must(template.New("script").Parse(driverTemplate))
 	for machineType, machineArgs := range cloud.MachineTypes {
-		clusterName := fmt.Sprintf("cldrprt%d-%s-%s-%s-%s",
-			(1+time.Now().Year())%1000, cloud.Cloud, cloud.Group, reportVersion, machineType)
+
+		clusterName := fmt.Sprintf("cldrprt%d-%s-%d",
+			(1+time.Now().Year())%1000, machineType,
+			hashStrings(cloud.Cloud, cloud.Group, reportVersion))
 		validClusterName := regexp.MustCompile(`[\.|\_]`)
 		clusterName = validClusterName.ReplaceAllString(clusterName, "-")
 
