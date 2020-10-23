@@ -25,5 +25,5 @@ packages=(
 
 sudo apt-get update
 sudo apt-get -y install "${packages[@]}"
-chown -R "$USER" /mnt/data*
+chown -R ubuntu /mnt/data*
 
