@@ -36,7 +36,9 @@
       "local-ssd": "false",
       "azure-network-disk-type": "premium-disk",
       "azure-locations": "eastus",
-      "azure-availability-zone": "2"
+      "azure-availability-zone": "2",
+      "azure-volume-size": "2500",
+      "azure-disk-caching": "read-only"
     }
   },
   {
@@ -57,7 +59,8 @@
       "local-ssd": "false",
       "azure-network-disk-type": "ultra-disk",
       "azure-locations": "eastus",
-      "azure-availability-zone": "2"
+      "azure-availability-zone": "2",
+      "azure-volume-size": "2500"
     }
   }
 ]

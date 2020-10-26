@@ -44,11 +44,17 @@ fi
 # !!! WARNING !!!
 #    THIS WILL DESTROY DATA ON THE DISK ***
 # !!! WARNING !!!
-DEV=$(lsblk | grep /mnt/data1|cut -d" " -f1)
+if mountpoint -q /mnt/data1;
+then
+  mount=$(readlink /mnt/data1 || echo /mnt/data1)
+else
+  mount="/mnt"
+fi
+DEV=$(lsblk -r | grep $mount|cut -d" " -f1)
 
 # Unmount /mnt/data1 -- the disk we will benchmark; remount when benchmark completes.
-sudo umount /mnt/data1
-trap "rm -f $pidfile; sudo mkfs.ext4 -F /dev/$DEV && sudo mount /mnt/data1" EXIT SIGINT
+sudo umount "$mount"
+trap "rm -f $pidfile; sudo mkfs.ext4 -F /dev/$DEV && sudo mount $mount" EXIT SIGINT
 echo $$ > "$pidfile"
 
 # Remove processed options.  Remaining ones assumed to be FIO specific flags.
