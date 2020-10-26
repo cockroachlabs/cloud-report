@@ -85,10 +85,6 @@ function upload_scripts() {
   roachprod run "$CLUSTER" rm  -- -rf ./scripts
   roachprod put "$CLUSTER" {{.ScriptsDir}} scripts
   roachprod run "$CLUSTER" chmod -- -R +x ./scripts
-}
-
-# Start cockroach cluster on nodes [1-3].
-function start_cockroach() {
   roachprod run "$CLUSTER" "rm -f ./cockroach"
   if [ -z "$cockroach_binary" ]
   then
@@ -96,7 +92,10 @@ function start_cockroach() {
   else
     roachprod put "$CLUSTER" "$cockroach_binary" "cockroach"
   fi
+}
 
+# Start cockroach cluster on nodes [1-3].
+function start_cockroach() {
   # Build --store flags based on the number of disks.
   # Roachprod adds /mnt/data1/cockroach by itself, so, we'll pick up the other disks
   for s in $(roachprod run "$CLUSTER":1 'ls -1d /mnt/data[2-9]* 2>/dev/null || echo')
@@ -170,6 +169,7 @@ function fetch_bench_net_results() {
 
 # Run TPCC Benchmark
 function bench_tpcc() {
+ roachprod pgurl "$CLUSTER:1" /dev/null 2>&1 || start_cockroach
  pgurls=$(roachprod pgurl "$CLUSTER":1-$((NODES-1)))
  run_under_tmux "tpcc" "$CLUSTER:4" "./scripts/gen/tpcc.sh $tpcc_extra_args ${pgurls[@]}"
 }
@@ -191,7 +191,6 @@ Usage: $0 [-b <bootstrap>]... [-w <workload>]... [-d] [-c cockroach_binary]
          -b create: creates cluster
          -b upload: uploads required scripts
          -b setup: execute setup script on the cluster
-         -b cockroach: start cockroach
          -b all: all of the above steps
    -w: Specify workloads (benchmarks) to execute.
        -w cpu : Benchmark CPU
@@ -215,7 +214,6 @@ f_resume=''
 do_create=''
 do_upload=''
 do_setup=''
-do_cockroach=''
 do_destroy=''
 io_extra_args=''
 cpu_extra_args=''
@@ -235,7 +233,6 @@ while getopts 'c:b:w:dI:N:C:T:r' flag; do
         create)    do_create='true' ;;
         upload)    do_upload='true' ;;
         setup)     do_setup='true' ;;
-        cockroach) do_cockroach='true' ;;
         *) usage "Invalid -b value '${OPTARG}'" ;;
        esac
     ;;
@@ -272,12 +269,6 @@ fi
 if [ -n "$do_setup" ];
 then
   setup_cluster
-fi
-
-
-if [ -n "$do_cockroach" ];
-then
-  start_cockroach
 fi
 
 if [ -z "$f_resume" ]
