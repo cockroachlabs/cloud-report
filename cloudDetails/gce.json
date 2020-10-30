@@ -5,18 +5,24 @@
         "machineTypes": {
             "n2-standard-16": null,
             "n2d-standard-16": {
-                "gce-zones": "us-east1-c"
+                "args": {
+                    "gce-zones": "us-east1-c"
+                }
             },
             "n2-highmem-16": null,
             "n2-highcpu-16": null,
             "n2d-highcpu-16": {
-                "gce-zones": "us-east1-c"
+                "args": {
+                    "gce-zones": "us-east1-c"
+                }
             },
             "c2-standard-16": null,
             "m1-ultramem-40":  null,
             "n2-highmem-16":  null,
             "n2d-highmem-16": {
-                "gce-zones": "us-east1-c"
+                "args": {
+                    "gce-zones": "us-east1-c"
+                }
             }
         },
         "roachprodArgs": {
@@ -32,18 +38,24 @@
         "machineTypes": {
             "n2-standard-16": null,
             "n2d-standard-16":  {
-                "gce-zones": "us-east1-c"
+                "args": {
+                    "gce-zones": "us-east1-c"
+                }
             },
             "n2-highmem-16": null,
             "n2-highcpu-16": null,
             "n2d-highcpu-16":  {
-                "gce-zones": "us-east1-c"
+                "args": {
+                    "gce-zones": "us-east1-c"
+                }
             },
             "c2-standard-16": null,
             "m1-ultramem-40":  null,
             "n2-highmem-16":  null,
             "n2d-highmem-16": {
-                "gce-zones": "us-east1-c"
+                "args": {
+                    "gce-zones": "us-east1-c"
+                }
             }
         },
         "roachprodArgs": {

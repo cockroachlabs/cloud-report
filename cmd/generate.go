@@ -340,8 +340,7 @@ func generateCloudScripts(cloud CloudDetails) error {
 	}
 
 	scriptTemplate := template.Must(template.New("script").Parse(driverTemplate))
-	for machineType, machineArgs := range cloud.MachineTypes {
-
+	for machineType, machineConfig := range cloud.MachineTypes {
 		clusterName := fmt.Sprintf("cldrprt%d-%s-%d",
 			(1+time.Now().Year())%1000, machineType,
 			hashStrings(cloud.Cloud, cloud.Group, reportVersion))
@@ -358,7 +357,7 @@ func generateCloudScripts(cloud CloudDetails) error {
 
 		// Evaluate roachprodArgs: those maybe templatized.
 		evaledArgs := make(map[string]string)
-		combinedArgs := combineArgs(machineArgs, cloud.RoachprodArgs)
+		combinedArgs := combineArgs(machineConfig.Args, cloud.RoachprodArgs)
 		if err := evalArgs(combinedArgs, templateArgs, evaledArgs); err != nil {
 			return err
 		}
