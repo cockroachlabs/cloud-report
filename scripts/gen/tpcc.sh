@@ -4,7 +4,7 @@ set -ex
 pidfile="$HOME/tpcc-bench.pid"
 f_force=''
 f_wait=''
-MAX_WAREHOUSES=2500
+f_active=2500
 f_warehouses=2500
 f_skip_load=''
 f_duration="15m"
@@ -15,17 +15,19 @@ Usage: $0 [-f] [-w] [-s server] [pgurl,...]
   -f: ignore existing pid file; override and rerun.
   -w: wait for currently running benchmark to complete.
   -W: number of warehouses; default 2500
+  -A: number of active warehouses; default 2500
   -s: skip loading stage
   -d: duration; default 30m
 "
   exit 1
 }
 
-while getopts 'fwsW:d:' flag; do
+while getopts 'fwsW:A:d:' flag; do
   case "${flag}" in
     f) f_force='true' ;;
     w) f_wait='true' ;;
     W) f_warehouses="${OPTARG}" ;;
+    A) f_active="${OPTARG}" ;;
     s) f_skip_load='true' ;;
     d) f_duration="${OPTARG}" ;;
     *) usage "";;
@@ -79,10 +81,10 @@ then
   ";
 
   echo "importing..."
-  ./cockroach workload fixtures import tpcc --warehouses="$MAX_WAREHOUSES" "${pgurls[0]}"
+  ./cockroach workload fixtures import tpcc --warehouses="$f_warehouses" "${pgurls[0]}"
   echo "done importing"
 fi
 
 echo "Running TPCC"
-./cockroach workload run tpcc --warehouses="$MAX_WAREHOUSES"  --active-warehouses="$f_warehouses" --ramp=1m --duration="$f_duration" "${pgurls[@]}" > "$report"
+./cockroach workload run tpcc --warehouses="$f_warehouses"  --active-warehouses="$f_active" --ramp=1m --duration="$f_duration" "${pgurls[@]}" > "$report"
 touch "$logdir/success"
