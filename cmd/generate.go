@@ -169,7 +169,7 @@ function fetch_bench_net_results() {
 
 # Run TPCC Benchmark
 function bench_tpcc() {
- roachprod pgurl "$CLUSTER:1" /dev/null 2>&1 || start_cockroach
+ roachprod pgurl "$CLUSTER:1" > /dev/null 2>&1 || start_cockroach
  pgurls=$(roachprod pgurl "$CLUSTER":1-$((NODES-1)))
  run_under_tmux "tpcc" "$CLUSTER:4" "./scripts/gen/tpcc.sh $tpcc_extra_args ${pgurls[@]}"
 }
