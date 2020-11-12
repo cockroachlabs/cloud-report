@@ -23,6 +23,10 @@ import (
 var reportVersion string
 var baseOutputDir string
 
+type machineConfig struct {
+	Args map[string]string `json:"args"`
+}
+
 // CloudDetails provides the name of the cloud and the different
 // machine types you should run the benchmark suite against.
 type CloudDetails struct {
@@ -34,7 +38,7 @@ type CloudDetails struct {
 
 	// Map from machine type to the map of the machine specific arguments
 	// that should be passed when creating cluster.
-	MachineTypes map[string]map[string]string `json:"machineTypes"`
+	MachineTypes map[string]machineConfig `json:"machineTypes"`
 }
 
 func (c CloudDetails) BasePath() string {
