@@ -56,6 +56,7 @@ type scriptData struct {
 	MachineType string
 	ScriptsDir  string
 	EvaledArgs  string
+	BenchArgs   map[string]string
 }
 
 const driverTemplate = `#!/bin/bash
@@ -215,10 +216,10 @@ do_create=''
 do_upload=''
 do_setup=''
 do_destroy=''
-io_extra_args=''
-cpu_extra_args=''
-net_extra_args=''
-tpcc_extra_args=''
+io_extra_args='{{with $arg := .BenchArgs.io}}{{$arg}}{{end}}'
+cpu_extra_args='{{with $arg := .BenchArgs.cpu}}{{$arg}}{{end}}'
+net_extra_args='{{with $arg := .BenchArgs.net}}{{$arg}}{{end}}'
+tpcc_extra_args='{{with $arg := .BenchArgs.tpcc}}{{$arg}}{{end}}'
 cockroach_binary=''
 
 while getopts 'c:b:w:dI:N:C:T:r' flag; do
@@ -353,11 +354,12 @@ func generateCloudScripts(cloud CloudDetails) error {
 			Lifetime:     lifetime,
 			MachineType:  machineType,
 			ScriptsDir:   scriptsDir,
+			BenchArgs:    machineConfig.BenchArgs,
 		}
 
 		// Evaluate roachprodArgs: those maybe templatized.
 		evaledArgs := make(map[string]string)
-		combinedArgs := combineArgs(machineConfig.Args, cloud.RoachprodArgs)
+		combinedArgs := combineArgs(machineConfig.RoachprodArgs, cloud.RoachprodArgs)
 		if err := evalArgs(combinedArgs, templateArgs, evaledArgs); err != nil {
 			return err
 		}

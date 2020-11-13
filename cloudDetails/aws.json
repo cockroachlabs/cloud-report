@@ -7,12 +7,12 @@
       "m5dn.4xlarge": null,
       "m5ad.4xlarge": null,
       "m6gd.4xlarge": {
-        "args": {
+        "roachprodArgs": {
           "aws-image-ami": "ami-0567cfa579580f324"
         }
       },
       "c6gd.4xlarge": {
-        "args": {
+        "roachprodArgs": {
           "aws-image-ami": "ami-0567cfa579580f324"
         }
       },
@@ -22,7 +22,7 @@
       "r5ad.4xlarge": null,
       "i3.4xlarge": null,
       "i3en.6xlarge": {
-        "args" : {
+        "roachprodArgs" : {
           "aws-cpu-options": "CoreCount=8,ThreadsPerCore=2"
         }
       }
@@ -44,12 +44,12 @@
       "m5n.4xlarge": null,
       "m5a.4xlarge": null,
       "m6g.4xlarge": {
-        "args": {
+        "roachprodArgs": {
           "aws-image-ami": "ami-0567cfa579580f324"
         }
       },
       "c6g.4xlarge": {
-        "args": {
+        "roachprodArgs": {
           "aws-image-ami": "ami-0567cfa579580f324"
         }
       },
@@ -77,12 +77,12 @@
       "m5n.4xlarge": null,
       "m5a.4xlarge": null,
       "m6g.4xlarge": {
-        "args": {
+        "roachprodArgs": {
           "aws-image-ami": "ami-0567cfa579580f324"
         }
       },
       "c6g.4xlarge": {
-        "args": {
+        "roachprodArgs": {
           "aws-image-ami": "ami-0567cfa579580f324"
         }
       },

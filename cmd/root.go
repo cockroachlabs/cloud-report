@@ -24,7 +24,8 @@ var reportVersion string
 var baseOutputDir string
 
 type machineConfig struct {
-	Args map[string]string `json:"args"`
+	RoachprodArgs map[string]string `json:"roachprodArgs"`
+	BenchArgs     map[string]string `json:"benchArgs"`
 }
 
 // CloudDetails provides the name of the cloud and the different
