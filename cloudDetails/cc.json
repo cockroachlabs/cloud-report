@@ -4,47 +4,39 @@
     "cloud": "aws",
     "machineTypes": {
       "c5.large": {
-        "args": {
+        "roachprodArgs": {
           "aws-ebs-volume-size": "60",
           "aws-ebs-iops": "600"
         },
-        "tpcc": {
-          "cost_descr": "CostPerMonth=(Instance: 0.085 * 24 * 30) + (Disk: 60*0.125) + (IOPs: 600*0.065)",
-          "cost": 107.7,
-          "warehouses": 500
+        "benchArgs": {
+          "tpcc": "-A 150 -W 500 -I 50 -d 10m"
         }
       },
       "c5.2xlarge": {
-        "args": {
-        "aws-ebs-volume-size": "150",
-        "aws-ebs-iops": "900"
+        "roachprodArgs": {
+          "aws-ebs-volume-size": "150",
+          "aws-ebs-iops": "900"
         },
-        "tpcc": {
-          "cost_descr": "CostPerMonth=(Instance: 0.17 * 24 * 30) + (Disk: 150*0.125) + (IOPs: 900*0.065)",
-          "cost": 199.65,
-          "warehouses": 750
+        "benchArgs": {
+          "tpcc": "-A 300 -W 750 -I 50 -d 10m"
         }
       },
       "c5.2xlarge": {
-        "args": {
+        "roachprodArgs": {
           "aws-ebs-volume-size": "500",
           "aws-ebs-iops": "1800"
         },
-        "tpcc": {
-          "cost_descr": "CostPerMonth=(Instance: 0.34 * 24 * 30) + (Disk: 500*0.125) + (IOPs: 1800*0.065)",
-          "cost": 424.3,
-          "warehouses": 1125
+        "benchArgs": {
+          "tpcc": "-A 750 -W 1500 -I 100 -d 10m"
         }
       },
       "c5.4xlarge": {
-        "args": {
+        "roachprodArgs": {
           "aws-ebs-volume-size": "900",
           "aws-ebs-iops": "2000"
         },
-        "tpcc": {
-          "cost_descr": "CostPerMonth=(Instance: 0.68 * 24 * 30) + (Disk: 900*0.125) + (IOPs: 2000*0.065)",
-          "cost": 732.1,
-          "warehouses": 1700
+        "benchArgs": {
+          "tpcc": "-A 1250 -W 2500 -I 200 -d 10m"
         }
       }
     },
@@ -54,6 +46,143 @@
       "aws-image-ami": "ami-013da1cc4ae87618c",
       "local-ssd": "false",
       "aws-enable-multiple-stores": null
+    }
+  },
+  {
+    "group": "ebs-io1",
+    "cloud": "aws",
+    "machineTypes": {
+      "c5.large": {
+        "roachprodArgs": {
+          "aws-ebs-volume-size": "60",
+          "aws-ebs-iops": "600"
+        },
+        "benchArgs": {
+          "tpcc": "-A 150 -W 500 -I 50 -d 10m"
+        }
+      },
+      "c5.2xlarge": {
+        "roachprodArgs": {
+          "aws-ebs-volume-size": "150",
+          "aws-ebs-iops": "900"
+        },
+        "benchArgs": {
+          "tpcc": "-A 300 -W 750 -I 50 -d 10m"
+        }
+      },
+      "c5.2xlarge": {
+        "roachprodArgs": {
+          "aws-ebs-volume-size": "500",
+          "aws-ebs-iops": "1800"
+        },
+        "benchArgs": {
+          "tpcc": "-A 750 -W 1500 -I 100 -d 10m"
+        }
+      },
+      "c5.4xlarge": {
+        "roachprodArgs": {
+          "aws-ebs-volume-size": "900",
+          "aws-ebs-iops": "2000"
+        },
+        "benchArgs": {
+          "tpcc": "-A 1250 -W 2500 -I 200 -d 10m"
+        }
+      }
+    },
+    "roachprodArgs" : {
+      "aws-ebs-volume-type": "io1",
+      "aws-zones": "us-east-1a",
+      "aws-image-ami": "ami-013da1cc4ae87618c",
+      "local-ssd": "false",
+      "aws-enable-multiple-stores": null
+    }
+  },
+  {
+    "group": "pd-ssd-n1",
+    "cloud": "gce",
+    "machineTypes": {
+      "n1-standard-2": {
+        "roachprodArgs": {
+          "gce-pd-volume-size": "60"
+        },
+        "benchArgs": {
+          "tpcc": "-A 150 -W 500 -I 50 -d 10m"
+        }
+      },
+      "n1-standard-4": {
+        "roachprodArgs": {
+          "gce-pd-volume-size": "150"
+        },
+        "benchArgs": {
+          "tpcc": "-A 300 -W 750 -I 50 -d 10m"
+        }
+      },
+      "n1-standard-8": {
+        "args": {
+          "gce-pd-volume-size": "500"
+        },
+        "benchArgs": {
+          "tpcc": "-A 750 -W 1500 -I 100 -d 10m"
+        }
+      },
+      "n1-standard-16": {
+        "args": {
+          "aws-ebs-volume-size": "900"
+        },
+        "benchArgs": {
+          "tpcc": "-A 1250 -W 2500 -I 200 -d 10m"
+        }
+      }
+    },
+    "roachprodArgs" : {
+      "local-ssd": "false",
+      "gce-image": "ubuntu-1804-bionic-v20200923",
+      "gce-zones": "us-east4-c",
+      "gce-pd-volume-type": "pd-ssd"
+    }
+  },
+  {
+    "group": "pd-ssd-n2",
+    "cloud": "gce",
+    "machineTypes": {
+      "n2-standard-2": {
+        "roachprodArgs": {
+          "gce-pd-volume-size": "60"
+        },
+        "benchArgs": {
+          "tpcc": "-A 150 -W 500 -I 50 -d 10m"
+        }
+      },
+      "n2-standard-4": {
+        "roachprodArgs": {
+          "gce-pd-volume-size": "150"
+        },
+        "benchArgs": {
+          "tpcc": "-A 300 -W 750 -I 50 -d 10m"
+        }
+      },
+      "n2-standard-8": {
+        "args": {
+          "gce-pd-volume-size": "500"
+        },
+        "benchArgs": {
+          "tpcc": "-A 750 -W 1500 -I 100 -d 10m"
+        }
+      },
+      "n2-standard-16": {
+        "args": {
+          "aws-ebs-volume-size": "900"
+        },
+        "benchArgs": {
+          "tpcc": "-A 1250 -W 2500 -I 200 -d 10m"
+        }
+      }
+    },
+    "roachprodArgs" : {
+      "local-ssd": "false",
+      "gce-image": "ubuntu-1804-bionic-v20200923",
+      "gce-zones": "us-east4-c",
+      "gce-pd-volume-type": "pd-ssd"
     }
   }
 ]

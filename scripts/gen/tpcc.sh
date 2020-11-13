@@ -24,7 +24,7 @@ Usage: $0 [-f] [-w] [-s server] [pgurl,...]
   exit 1
 }
 
-while getopts 'fwsW:A:d:' flag; do
+while getopts 'fwsW:A:I:d:' flag; do
   case "${flag}" in
     f) f_force='true' ;;
     w) f_wait='true' ;;
