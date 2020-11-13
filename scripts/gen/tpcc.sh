@@ -5,9 +5,10 @@ pidfile="$HOME/tpcc-bench.pid"
 f_force=''
 f_wait=''
 f_active=2500
-f_warehouses=2500
+f_warehouses=3500
 f_skip_load=''
-f_duration="15m"
+f_duration="30m"
+f_inc=250
 
 function usage() {
   echo "$1
@@ -16,6 +17,7 @@ Usage: $0 [-f] [-w] [-s server] [pgurl,...]
   -w: wait for currently running benchmark to complete.
   -W: number of warehouses; default 2500
   -A: number of active warehouses; default 2500
+  -I: warehouse increment; default 0 -- run tpcc once only once
   -s: skip loading stage
   -d: duration; default 30m
 "
@@ -28,6 +30,7 @@ while getopts 'fwsW:A:d:' flag; do
     w) f_wait='true' ;;
     W) f_warehouses="${OPTARG}" ;;
     A) f_active="${OPTARG}" ;;
+    I) f_inc="${OPTARG}" ;;
     s) f_skip_load='true' ;;
     d) f_duration="${OPTARG}" ;;
     *) usage "";;
@@ -65,7 +68,6 @@ echo $$ > "$pidfile"
 
 rm -rf "$logdir"
 mkdir "$logdir"
-report="${logdir}/tpcc-results.txt"
 exec &> >(tee -a "$logdir/script.log")
 
 cd "$HOME"
@@ -85,6 +87,25 @@ then
   echo "done importing"
 fi
 
-echo "Running TPCC"
-./cockroach workload run tpcc --warehouses="$f_warehouses"  --active-warehouses="$f_active" --ramp=1m --duration="$f_duration" "${pgurls[@]}" > "$report"
+if [[ $f_inc == 0 ]];
+then
+  f_inc=$f_warehouses
+fi
+
+for active in `seq $f_active $f_inc $f_warehouses`
+do
+  echo "Running TPCC: $active"
+  report="${logdir}/tpcc-results-$active.txt"
+./cockroach workload run tpcc \
+    --warehouses="$f_warehouses"  \
+    --active-warehouses="$active" \
+    --ramp=1m --duration="$f_duration" \
+    "${pgurls[@]}" > "$report"
+
+    if [[ $(tail -1 "$report" | awk '{if($3 > 85 && $7 < 10000){print "pass"}}') != "pass" ]];
+    then
+      break
+    fi
+done
+
 touch "$logdir/success"

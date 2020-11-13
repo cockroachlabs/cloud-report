@@ -609,12 +609,22 @@ func parseNetperfLatency(p string, res *networkResult) error {
 
 var _ resultsAnalyzer = &netAnalyzer{}
 
-type tpccResult struct {
+type tpccRun struct {
 	tpmC, efc, avg, p50, p90, p95, p99, pMax float64
-	pass                                     bool
-	modtime                                  time.Time
-	machine, disktype                        string
+	warehouses                               int64
 }
+
+func (r *tpccRun) pass() bool {
+	// TPCC run passes if efficiency exceeds 85% and p95 < 10s
+	return r.efc > 85.0 && r.p95 < 10000
+}
+
+type tpccResult struct {
+	runs              []*tpccRun
+	modtime           time.Time
+	machine, disktype string
+}
+
 type tpccAnalyzer struct {
 	machineResults map[string]*tpccResult
 	cloud          string
@@ -627,7 +637,7 @@ func newTPCCAnalyzer(cloud string) resultsAnalyzer {
 	}
 }
 
-const tpccCSVHeader = "Cloud,Group,Date,MachineType,Pass,TpmC,Efc,Avg,P50,P95,P99,PMax"
+const tpccCSVHeader = "Cloud,Group,Date,MachineType,Warehouses,Pass,TpmC,Efc,Avg,P50,P90,P95,P99,PMax"
 
 func (t *tpccAnalyzer) Close() error {
 	f, err := os.OpenFile(ResultsFile("tpcc.csv", t.cloud), os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
@@ -638,72 +648,88 @@ func (t *tpccAnalyzer) Close() error {
 
 	fmt.Fprintf(f, "%s\n", tpccCSVHeader)
 	for _, res := range t.machineResults {
-		fields := []string{
-			t.cloud,
-			res.disktype,
-			res.modtime.String(),
-			res.machine,
-			fmt.Sprintf("%t", res.pass),
-			fmt.Sprintf("%f", res.tpmC),
-			fmt.Sprintf("%f", res.efc),
-			fmt.Sprintf("%f", res.avg),
-			fmt.Sprintf("%f", res.p50),
-			fmt.Sprintf("%f", res.p95),
-			fmt.Sprintf("%f", res.p99),
-			fmt.Sprintf("%f", res.pMax),
+		for _, run := range res.runs {
+			fields := []string{
+				t.cloud,
+				res.disktype,
+				res.modtime.String(),
+				res.machine,
+				fmt.Sprintf("%d", run.warehouses),
+				fmt.Sprintf("%t", run.pass()),
+				fmt.Sprintf("%f", run.tpmC),
+				fmt.Sprintf("%f", run.efc),
+				fmt.Sprintf("%f", run.avg),
+				fmt.Sprintf("%f", run.p50),
+				fmt.Sprintf("%f", run.p90),
+				fmt.Sprintf("%f", run.p95),
+				fmt.Sprintf("%f", run.p99),
+				fmt.Sprintf("%f", run.pMax),
+			}
+			fmt.Fprintf(f, "%s\n", strings.Join(fields, ","))
 		}
-		fmt.Fprintf(f, "%s\n", strings.Join(fields, ","))
 	}
+
 	return nil
 }
 
-func parseTPCCResult(p string, res *tpccResult) error {
+func parseTPCCRun(p string) (*tpccRun, error) {
+	// First line:
+	// Initializing XXX connections.
+	// We use (by default) 2 connections per warehouse.
+	cmd := exec.Command("head", "-1", p)
+	out, err := cmd.Output()
+	run := &tpccRun{}
+	run.warehouses, err = strconv.ParseInt(strings.Fields(string(out))[1], 10, 64)
+	if err != nil {
+		return nil, err
+	}
+	run.warehouses /= 2
+
 	// _elapsed_______tpmC____efc__avg(ms)__p50(ms)__p90(ms)__p95(ms)__p99(ms)_pMax(ms)
 	//  900.0s    30733.3  95.6%    180.8    167.8    369.1    419.4    570.4   1677.7
-	cmd := exec.Command("tail", "-1", p)
-	out, err := cmd.Output()
+	cmd = exec.Command("tail", "-1", p)
+	out, err = cmd.Output()
 	pieces := strings.Fields(string(out))
 
 	if len(pieces) != 9 {
-		return fmt.Errorf("unexpected number of fields found. expected 7, found: %d", len(pieces))
+		return nil, fmt.Errorf("unexpected number of fields found. expected 7, found: %d", len(pieces))
 	}
 
-	res.tpmC, err = strconv.ParseFloat(pieces[1], 64)
+	run.tpmC, err = strconv.ParseFloat(pieces[1], 64)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	// Strip '%'
-	res.efc, err = strconv.ParseFloat(pieces[2][:len(pieces[2])-1], 64)
+	run.efc, err = strconv.ParseFloat(pieces[2][:len(pieces[2])-1], 64)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	res.avg, err = strconv.ParseFloat(pieces[3], 64)
+	run.avg, err = strconv.ParseFloat(pieces[3], 64)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	res.p50, err = strconv.ParseFloat(pieces[4], 64)
+	run.p50, err = strconv.ParseFloat(pieces[4], 64)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	res.p90, err = strconv.ParseFloat(pieces[5], 64)
+	run.p90, err = strconv.ParseFloat(pieces[5], 64)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	res.p95, err = strconv.ParseFloat(pieces[6], 64)
+	run.p95, err = strconv.ParseFloat(pieces[6], 64)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	res.p99, err = strconv.ParseFloat(pieces[7], 64)
+	run.p99, err = strconv.ParseFloat(pieces[7], 64)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	// Last entry has an extra new line
-	res.pMax, err = strconv.ParseFloat(pieces[8][:len(pieces[8])-1], 64)
+	run.pMax, err = strconv.ParseFloat(pieces[8][:len(pieces[8])-1], 64)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	res.pass = res.p90 <= 5000.0
-	return nil
+	return run, nil
 }
 
 func (t *tpccAnalyzer) analyzeTPCC(cloud CloudDetails, machineType string) error {
@@ -720,31 +746,29 @@ func (t *tpccAnalyzer) analyzeTPCC(cloud CloudDetails, machineType string) error
 		if err != nil {
 			return err
 		}
-		k := fmt.Sprintf("%s-%s", cloud.Group, machineType)
-		if res, ok := t.machineResults[k]; ok && res.modtime.After(info.ModTime()) {
+		machineKey := fmt.Sprintf("%s-%s", cloud.Group, machineType)
+		if res, ok := t.machineResults[machineKey]; ok && res.modtime.After(info.ModTime()) {
 			log.Printf("Skipping TPC-C throughput log %q (already analyzed newer", r)
 			continue
 		}
-		runs, err := filepath.Glob(path.Join(filepath.Dir(r), "tpcc-result*"))
+		resultsFiles, err := filepath.Glob(path.Join(filepath.Dir(r), "tpcc-result*"))
 		if err != nil {
 			return err
 		}
-		if len(runs) != 1 {
-			return fmt.Errorf("unexpected number of netperf runs found. expected 1, found %d", len(runs))
-		}
-		run := runs[0]
 		res := &tpccResult{
 			modtime:  info.ModTime(),
 			disktype: cloud.Group,
 			machine:  machineType,
 		}
-
-		err = parseTPCCResult(run, res)
-		if err != nil {
-			return err
+		t.machineResults[machineKey] = res
+		for _, f := range resultsFiles {
+			run, err := parseTPCCRun(f)
+			if err != nil {
+				return err
+			}
+			res.runs = append(res.runs, run)
 		}
-		// Do the same for latency below
-		t.machineResults[k] = res
+
 	}
 	return nil
 }
