@@ -1,6 +1,6 @@
-# cloud-report-2020
+# cloud-report-2021
 
-Details about and from the Cloud Report done in Q4 2019
+Details about and from the Cloud Report done in Q4 2020
 
 In 2018, we produced a "Cloud Report", wherein we assessed the performance of AWS vs. GCP along dimensions like TPC-C throughput, I/O, CPU and latency. This year, we aim to produce a similar report but including Azure.
 
