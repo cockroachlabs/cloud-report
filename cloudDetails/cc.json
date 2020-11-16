@@ -9,16 +9,16 @@
           "aws-ebs-iops": "600"
         },
         "benchArgs": {
-          "tpcc": "-A 150 -W 500 -I 50 -d 10m"
+          "tpcc": "-A 125 -W 250 -I 25 -d 10m"
         }
       },
-      "c5.2xlarge": {
+      "c5.xlarge": {
         "roachprodArgs": {
           "aws-ebs-volume-size": "150",
           "aws-ebs-iops": "900"
         },
         "benchArgs": {
-          "tpcc": "-A 300 -W 750 -I 50 -d 10m"
+          "tpcc": "-A 500 -W 1250 -I 100 -d 10m"
         }
       },
       "c5.2xlarge": {
@@ -27,7 +27,7 @@
           "aws-ebs-iops": "1800"
         },
         "benchArgs": {
-          "tpcc": "-A 750 -W 1500 -I 100 -d 10m"
+          "tpcc": "-A 1000 -W 1750 -I 100 -d 10m"
         }
       },
       "c5.4xlarge": {
@@ -36,7 +36,7 @@
           "aws-ebs-iops": "2000"
         },
         "benchArgs": {
-          "tpcc": "-A 1250 -W 2500 -I 200 -d 10m"
+          "tpcc": "-A 2000 -W 3250 -I 250 -d 10m"
         }
       }
     },
@@ -58,16 +58,16 @@
           "aws-ebs-iops": "600"
         },
         "benchArgs": {
-          "tpcc": "-A 150 -W 500 -I 50 -d 10m"
+          "tpcc": "-A 125 -W 250 -I 25 -d 10m"
         }
       },
-      "c5.2xlarge": {
+      "c5.xlarge": {
         "roachprodArgs": {
           "aws-ebs-volume-size": "150",
           "aws-ebs-iops": "900"
         },
         "benchArgs": {
-          "tpcc": "-A 300 -W 750 -I 50 -d 10m"
+          "tpcc": "-A 500 -W 1250 -I 100 -d 10m"
         }
       },
       "c5.2xlarge": {
@@ -76,7 +76,7 @@
           "aws-ebs-iops": "1800"
         },
         "benchArgs": {
-          "tpcc": "-A 750 -W 1500 -I 100 -d 10m"
+          "tpcc": "-A 1000 -W 1750 -I 100 -d 10m"
         }
       },
       "c5.4xlarge": {
@@ -85,12 +85,33 @@
           "aws-ebs-iops": "2000"
         },
         "benchArgs": {
-          "tpcc": "-A 1250 -W 2500 -I 200 -d 10m"
+          "tpcc": "-A 2000 -W 3000 -I 250 -d 10m"
         }
       }
     },
     "roachprodArgs" : {
       "aws-ebs-volume-type": "io1",
+      "aws-zones": "us-east-1a",
+      "aws-image-ami": "ami-013da1cc4ae87618c",
+      "local-ssd": "false",
+      "aws-enable-multiple-stores": null
+    }
+  },
+  {
+    "group": "ebs-gp2",
+    "cloud": "aws",
+    "machineTypes": {
+      "c5.4xlarge": {
+        "roachprodArgs": {
+          "aws-ebs-volume-size": "900"
+        },
+        "benchArgs": {
+          "tpcc": "-A 2000 -W 3250 -I 250 -d 10m"
+        }
+      }
+    },
+    "roachprodArgs" : {
+      "aws-ebs-volume-type": "gp2",
       "aws-zones": "us-east-1a",
       "aws-image-ami": "ami-013da1cc4ae87618c",
       "local-ssd": "false",
@@ -114,7 +135,7 @@
           "gce-pd-volume-size": "150"
         },
         "benchArgs": {
-          "tpcc": "-A 300 -W 750 -I 50 -d 10m"
+          "tpcc": "-A 500 -W 1250 -I 100 -d 10m"
         }
       },
       "n1-standard-8": {
@@ -122,7 +143,7 @@
           "gce-pd-volume-size": "500"
         },
         "benchArgs": {
-          "tpcc": "-A 750 -W 1500 -I 100 -d 10m"
+          "tpcc": "-A 1000 -W 1750 -I 100 -d 10m"
         }
       },
       "n1-standard-16": {
@@ -130,7 +151,7 @@
           "aws-ebs-volume-size": "900"
         },
         "benchArgs": {
-          "tpcc": "-A 1250 -W 2500 -I 200 -d 10m"
+          "tpcc": "-A 2250 -W 3000 -I 250 -d 10m"
         }
       }
     },
@@ -158,7 +179,7 @@
           "gce-pd-volume-size": "150"
         },
         "benchArgs": {
-          "tpcc": "-A 300 -W 750 -I 50 -d 10m"
+          "tpcc": "-A 700 -W 1200 -I 100 -d 10m"
         }
       },
       "n2-standard-8": {
@@ -166,7 +187,7 @@
           "gce-pd-volume-size": "500"
         },
         "benchArgs": {
-          "tpcc": "-A 750 -W 1500 -I 100 -d 10m"
+          "tpcc": "-A 1500 -W 2000 -I 100 -d 10m"
         }
       },
       "n2-standard-16": {
@@ -174,7 +195,7 @@
           "aws-ebs-volume-size": "900"
         },
         "benchArgs": {
-          "tpcc": "-A 1250 -W 2500 -I 200 -d 10m"
+          "tpcc": "-A 2500 -W 3500 -I 250 -d 10m"
         }
       }
     },
