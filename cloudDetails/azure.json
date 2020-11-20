@@ -61,7 +61,7 @@
       "azure-locations": "eastus",
       "azure-availability-zone": "2",
       "azure-volume-size": "2500",
-	  "azure-ultra-disk-iops": "25000"
+	  "azure-ultra-disk-iops": "16000"
     }
   }
 ]

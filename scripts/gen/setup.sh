@@ -25,5 +25,6 @@ packages=(
 
 sudo apt-get update
 sudo apt-get -y install "${packages[@]}"
+chmod 755 cockroach
 chown -R ubuntu /mnt/data*
 
