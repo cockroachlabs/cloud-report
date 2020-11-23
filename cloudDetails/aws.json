@@ -99,7 +99,7 @@
       "aws-zones": "us-east-1a",
       "aws-image-ami": "ami-013da1cc4ae87618c",
       "local-ssd": "false",
-      "aws-ebs-iops": "25000",
+      "aws-ebs-iops": "16000",
       "aws-enable-multiple-stores": null
     }
   }
