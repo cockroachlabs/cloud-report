@@ -142,13 +142,13 @@ function fetch_bench_cpu_results() {
 
 # Run FIO benchmark
 function bench_io() {
-  run_under_tmux "io" "$CLUSTER:2" "./scripts/gen/fio.sh -- $io_extra_args"
+  run_under_tmux "io" "$CLUSTER:1" "./scripts/gen/fio.sh -- $io_extra_args"
 }
 
 # Wait for FIO benchmark top finish and retrieve results.
 function fetch_bench_io_results() {
-  roachprod run "$CLUSTER":2 ./scripts/gen/fio.sh -- -w
-  roachprod get "$CLUSTER":2 ./fio-results $(results_dir "fio-results")
+  roachprod run "$CLUSTER":1 ./scripts/gen/fio.sh -- -w
+  roachprod get "$CLUSTER":1 ./fio-results $(results_dir "fio-results")
 }
 
 # Run Netperf benchmark
@@ -205,6 +205,7 @@ Usage: $0 [-b <bootstrap>]... [-w <workload>]... [-d] [-c cockroach_binary]
    -N: additional network benchmark arguments
    -C: additional CPU benchmark arguments
    -T: additional TPCC benchmark arguments
+   -n: override number of nodes in a cluster
    -d: Destroy cluster
 "
 exit 1
@@ -222,7 +223,7 @@ net_extra_args='{{with $arg := .BenchArgs.net}}{{$arg}}{{end}}'
 tpcc_extra_args='{{with $arg := .BenchArgs.tpcc}}{{$arg}}{{end}}'
 cockroach_binary=''
 
-while getopts 'c:b:w:dI:N:C:T:r' flag; do
+while getopts 'c:b:w:dn:I:N:C:T:r' flag; do
   case "${flag}" in
     b) case "${OPTARG}" in
         all)
@@ -249,6 +250,7 @@ while getopts 'c:b:w:dI:N:C:T:r' flag; do
     ;;
     d) do_destroy='true' ;;
     r) f_resume='true' ;;
+    n) NODES="${OPTARG}" ;;
     I) io_extra_args="${OPTARG}" ;;
     C) cpu_extra_args="${OPTARG}" ;;
     N) net_extra_args="${OPTARG}" ;;
