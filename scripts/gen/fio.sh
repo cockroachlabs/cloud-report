@@ -86,7 +86,7 @@ esac
 # Bandwidth benchmarks use large (1MB) block size, and run with iodepth_bw depth.
 iodepth_bw=$((depth_multiplier * 64))
 # IOPs benchmarks use default block size (4KB), and run with very large depth.
-iodepth_iops=$((depth_multiplier * 256))
+iodepth_iops=$((depth_multiplier * 512))
 # Latency benchmarks use 4KB block size.  IO depth is small to ensure that
 # we do not saturate device bandwidth.  If bandwidth is saturated, latency increases.
 iodepth_latency=$((depth_multiplier * 4))
