@@ -30,6 +30,9 @@
             "gce-image": "ubuntu-1804-bionic-v20200923",
             "gce-zones": "us-east4-c",
             "local-ssd-no-ext4-barrier": "false"
+        },
+        "benchArgs": {
+            "io": "-s"
         }
     },
     {
