@@ -4,19 +4,21 @@ set -ex
 pidfile="$HOME/fio-bench.pid"
 f_force=''
 f_wait=''
-
+f_ssd=''
 function usage() {
   echo "$1
-Usage: $0 [-f] [-w] [-- [fio specific args to override fio.cfg settings]]
+Usage: $0 [-f] [-w] [-s] [-- [fio specific args to override fio.cfg settings]]
   -f: ignore existing pid file; override and rerun.
   -w: wait for currently running benchmark to complete.
+  -s: assume disk is local SSD
 "
   exit 1
 }
-while getopts 'fw' flag; do
+while getopts 'fws' flag; do
   case "${flag}" in
     f) f_flag='true' ;;
     w) f_wait='true' ;;
+    s) f_ssd='true' ;;
     *) echo "Usage: $0 [-f] [-w] [-n num_iterations]"
        exit 1 ;;
   esac
@@ -70,18 +72,14 @@ lsblk
 df -h
 
 # Configure FIO with parameters dependent on the type of the disk (SSD vs attached)
-case "$DEV" in
-  nvme*)
-    depth_multiplier=16
-    latency_target_ms='10'
-    latency_pctl=99
-  ;;
-  *)
-    depth_multiplier=1
-    latency_target_ms='1000'
-    latency_pctl=95
-  ;;
-esac
+depth_multiplier=1
+latency_target_ms='1000'
+latency_pctl=95
+if [ -n "$f_ssd" ]; then
+  depth_multiplier=16
+  latency_target_ms='10'
+  latency_pctl=99
+fi
 
 # Bandwidth benchmarks use large (1MB) block size, and run with iodepth_bw depth.
 iodepth_bw=$((depth_multiplier * 64))

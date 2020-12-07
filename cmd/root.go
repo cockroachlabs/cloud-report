@@ -37,6 +37,9 @@ type CloudDetails struct {
 	// Common arguments passed to roachprod create.
 	RoachprodArgs map[string]string `json:"roachprodArgs"`
 
+	// Common benchmark specific args.
+	BenchArgs map[string]string `json:"benchArgs"`
+
 	// Map from machine type to the map of the machine specific arguments
 	// that should be passed when creating cluster.
 	MachineTypes map[string]machineConfig `json:"machineTypes"`

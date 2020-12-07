@@ -16,7 +16,10 @@
       "azure-locations": "eastus",
       "azure-availability-zone": "2",
       "local-ssd-no-ext4-barrier": "false"
-   }
+    },
+    "benchArgs": {
+      "io": "-s"
+    }
   },
   {
     "group": "premium-disk",

@@ -356,7 +356,7 @@ func generateCloudScripts(cloud CloudDetails) error {
 			Lifetime:     lifetime,
 			MachineType:  machineType,
 			ScriptsDir:   scriptsDir,
-			BenchArgs:    machineConfig.BenchArgs,
+			BenchArgs:    combineArgs(machineConfig.BenchArgs, cloud.BenchArgs),
 		}
 
 		// Evaluate roachprodArgs: those maybe templatized.
