@@ -48,6 +48,9 @@ fi
 
 cd coremark
 
+# Dump CPU info into logs (sanity check)
+cat /proc/cpuinfo
+
 # Build default coremark (single proc)
 make REBUILD=1 link
 

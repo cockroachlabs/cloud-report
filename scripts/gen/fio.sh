@@ -5,20 +5,23 @@ pidfile="$HOME/fio-bench.pid"
 f_force=''
 f_wait=''
 f_ssd=''
+f_cfg='fio.cfg'
 function usage() {
   echo "$1
-Usage: $0 [-f] [-w] [-s] [-- [fio specific args to override fio.cfg settings]]
+Usage: $0 [-f] [-w] [-s] [-c fio.cfg] [-- [fio specific args to override fio.cfg settings]]
   -f: ignore existing pid file; override and rerun.
   -w: wait for currently running benchmark to complete.
   -s: assume disk is local SSD
+  -c: FIO config
 "
   exit 1
 }
-while getopts 'fws' flag; do
+while getopts 'fwsc:' flag; do
   case "${flag}" in
     f) f_flag='true' ;;
     w) f_wait='true' ;;
     s) f_ssd='true' ;;
+    c) f_cfg="${OPTARG}" ;;
     *) echo "Usage: $0 [-f] [-w] [-n num_iterations]"
        exit 1 ;;
   esac
@@ -54,9 +57,21 @@ else
 fi
 DEV=$(lsblk -r | grep $mount|cut -d" " -f1)
 
+function restore_fs() {
+  sudo mkfs.ext4 -F /dev/$DEV
+  sudo mount $mount
+  sudo mkdir $mount/cockroach
+  sudo chown ubuntu $mount/cockroach
+  rm $pidfile
+}
+
+# We run 8 bandwidth jobs -- have each operation on different portion
+# of the disk by specifying offset increment == 1/8 of disk size (in MB)
+OFFSET="$(lsblk  -rb|grep /mnt/data1|awk '{print int($4/2^23)}')M"
+
 # Unmount /mnt/data1 -- the disk we will benchmark; remount when benchmark completes.
 sudo umount "$mount"
-trap "rm -f $pidfile; sudo mkfs.ext4 -F /dev/$DEV && sudo mount $mount" EXIT SIGINT
+trap restore_fs EXIT SIGINT
 echo $$ > "$pidfile"
 
 # Remove processed options.  Remaining ones assumed to be FIO specific flags.
@@ -87,12 +102,13 @@ iodepth_bw=$((depth_multiplier * 64))
 iodepth_iops=$((depth_multiplier * 512))
 # Latency benchmarks use 4KB block size.  IO depth is small to ensure that
 # we do not saturate device bandwidth.  If bandwidth is saturated, latency increases.
-iodepth_latency=$((depth_multiplier * 4))
+iodepth_latency=$((depth_multiplier * 16))
 
 cd "$(dirname $0)"
 sudo \
    env IODEPTH_BW=$iodepth_bw IODEPTH_IOPS=$iodepth_iops IODEPTH_LATENCY=$iodepth_latency \
        LATENCY_TARGET="${latency_target_ms}ms" LATENCY_WINDOW="$((latency_target_ms * 10))ms" LATENCY_PCTL=$latency_pctl \
-   fio --filename="/dev/$DEV" --output="$report" --output-format=json "$@" ./fio.cfg
+       OFFSET="$OFFSET" \
+   fio --filename="/dev/$DEV" --output="$report" --output-format=json "$@" "${f_cfg}"
 
 touch "$logdir/success"

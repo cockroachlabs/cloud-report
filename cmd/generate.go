@@ -142,7 +142,7 @@ function fetch_bench_cpu_results() {
 
 # Run FIO benchmark
 function bench_io() {
-  run_under_tmux "io" "$CLUSTER:1" "./scripts/gen/fio.sh -- $io_extra_args"
+  run_under_tmux "io" "$CLUSTER:1" "./scripts/gen/fio.sh $io_extra_args"
 }
 
 # Wait for FIO benchmark top finish and retrieve results.
