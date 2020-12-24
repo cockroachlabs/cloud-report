@@ -1,12 +1,13 @@
 [
   {
-    "group": "ebs-io2",
+    "group": "gp3-10",
     "cloud": "aws",
     "machineTypes": {
       "c5.large": {
         "roachprodArgs": {
-          "aws-ebs-volume-size": "60",
-          "aws-ebs-iops": "600"
+          "aws-ebs-volume-size": "125",
+          "aws-ebs-iops": "3000",
+          "aws-ebs-throughput": "250"
         },
         "benchArgs": {
           "tpcc": "-A 125 -W 250 -I 25 -d 10m"
@@ -14,8 +15,9 @@
       },
       "c5.xlarge": {
         "roachprodArgs": {
-          "aws-ebs-volume-size": "150",
-          "aws-ebs-iops": "900"
+          "aws-ebs-volume-size": "145",
+          "aws-ebs-iops": "3000",
+          "aws-ebs-throughput": "500"
         },
         "benchArgs": {
           "tpcc": "-A 500 -W 1250 -I 100 -d 10m"
@@ -23,8 +25,9 @@
       },
       "c5.2xlarge": {
         "roachprodArgs": {
-          "aws-ebs-volume-size": "500",
-          "aws-ebs-iops": "1800"
+          "aws-ebs-volume-size": "286",
+          "aws-ebs-iops": "7500",
+          "aws-ebs-throughput": "750"
         },
         "benchArgs": {
           "tpcc": "-A 1000 -W 1750 -I 100 -d 10m"
@@ -32,8 +35,9 @@
       },
       "c5.4xlarge": {
         "roachprodArgs": {
-          "aws-ebs-volume-size": "900",
-          "aws-ebs-iops": "2000"
+          "aws-ebs-volume-size": "1280",
+          "aws-ebs-iops": "12800",
+          "aws-ebs-throughput": "590"
         },
         "benchArgs": {
           "tpcc": "-A 2000 -W 3250 -I 250 -d 10m"
@@ -41,21 +45,25 @@
       }
     },
     "roachprodArgs" : {
-      "aws-ebs-volume-type": "io2",
+      "aws-ebs-volume-type": "gp3",
       "aws-zones": "us-east-1a",
       "aws-image-ami": "ami-013da1cc4ae87618c",
       "local-ssd": "false",
       "aws-enable-multiple-stores": null
+    },
+    "benchArgs": {
+      "io": "-c fio-cc.cfg"
     }
   },
   {
-    "group": "ebs-io1",
+    "group": "gp3-30",
     "cloud": "aws",
     "machineTypes": {
       "c5.large": {
         "roachprodArgs": {
-          "aws-ebs-volume-size": "60",
-          "aws-ebs-iops": "600"
+          "aws-ebs-volume-size": "125",
+          "aws-ebs-iops": "3750",
+          "aws-ebs-throughput": "250"
         },
         "benchArgs": {
           "tpcc": "-A 125 -W 250 -I 25 -d 10m"
@@ -63,8 +71,9 @@
       },
       "c5.xlarge": {
         "roachprodArgs": {
-          "aws-ebs-volume-size": "150",
-          "aws-ebs-iops": "900"
+          "aws-ebs-volume-size": "145",
+          "aws-ebs-iops": "6000",
+          "aws-ebs-throughput": "500"
         },
         "benchArgs": {
           "tpcc": "-A 500 -W 1250 -I 100 -d 10m"
@@ -72,8 +81,9 @@
       },
       "c5.2xlarge": {
         "roachprodArgs": {
-          "aws-ebs-volume-size": "500",
-          "aws-ebs-iops": "1800"
+          "aws-ebs-volume-size": "333",
+          "aws-ebs-iops": "9990",
+          "aws-ebs-throughput": "285"
         },
         "benchArgs": {
           "tpcc": "-A 1000 -W 1750 -I 100 -d 10m"
@@ -81,29 +91,9 @@
       },
       "c5.4xlarge": {
         "roachprodArgs": {
-          "aws-ebs-volume-size": "900",
-          "aws-ebs-iops": "2000"
-        },
-        "benchArgs": {
-          "tpcc": "-A 2000 -W 3000 -I 250 -d 10m"
-        }
-      }
-    },
-    "roachprodArgs" : {
-      "aws-ebs-volume-type": "io1",
-      "aws-zones": "us-east-1a",
-      "aws-image-ami": "ami-013da1cc4ae87618c",
-      "local-ssd": "false",
-      "aws-enable-multiple-stores": null
-    }
-  },
-  {
-    "group": "ebs-gp2",
-    "cloud": "aws",
-    "machineTypes": {
-      "c5.4xlarge": {
-        "roachprodArgs": {
-          "aws-ebs-volume-size": "900"
+          "aws-ebs-volume-size": "533",
+          "aws-ebs-iops": "15990",
+          "aws-ebs-throughput": "590"
         },
         "benchArgs": {
           "tpcc": "-A 2000 -W 3250 -I 250 -d 10m"
@@ -111,59 +101,74 @@
       }
     },
     "roachprodArgs" : {
-      "aws-ebs-volume-type": "gp2",
+      "aws-ebs-volume-type": "gp3",
       "aws-zones": "us-east-1a",
       "aws-image-ami": "ami-013da1cc4ae87618c",
       "local-ssd": "false",
       "aws-enable-multiple-stores": null
+    },
+    "benchArgs": {
+      "io": "-c fio-cc.cfg"
     }
   },
   {
-    "group": "pd-ssd-n1",
-    "cloud": "gce",
+    "group": "gp3-15",
+    "cloud": "aws",
     "machineTypes": {
-      "n1-standard-2": {
+      "c5.large": {
         "roachprodArgs": {
-          "gce-pd-volume-size": "60"
+          "aws-ebs-volume-size": "128",
+          "aws-ebs-iops": "3000",
+          "aws-ebs-throughput": "250"
         },
         "benchArgs": {
-          "tpcc": "-A 150 -W 500 -I 50 -d 10m"
+          "tpcc": "-A 125 -W 250 -I 25 -d 10m"
         }
       },
-      "n1-standard-4": {
+      "c5.xlarge": {
         "roachprodArgs": {
-          "gce-pd-volume-size": "150"
+          "aws-ebs-volume-size": "256",
+          "aws-ebs-iops": "3840",
+          "aws-ebs-throughput": "145"
         },
         "benchArgs": {
           "tpcc": "-A 500 -W 1250 -I 100 -d 10m"
         }
       },
-      "n1-standard-8": {
-        "args": {
-          "gce-pd-volume-size": "500"
+      "c5.2xlarge": {
+        "roachprodArgs": {
+          "aws-ebs-volume-size": "640",
+          "aws-ebs-iops": "9600",
+          "aws-ebs-throughput": "285"
         },
         "benchArgs": {
           "tpcc": "-A 1000 -W 1750 -I 100 -d 10m"
         }
       },
-      "n1-standard-16": {
-        "args": {
-          "aws-ebs-volume-size": "900"
+      "c5.4xlarge": {
+        "roachprodArgs": {
+          "aws-ebs-volume-size": "1024",
+          "aws-ebs-iops": "15260",
+          "aws-ebs-throughput": "590"
         },
         "benchArgs": {
-          "tpcc": "-A 2250 -W 3000 -I 250 -d 10m"
+          "tpcc": "-A 2000 -W 3250 -I 250 -d 10m"
         }
       }
     },
     "roachprodArgs" : {
+      "aws-ebs-volume-type": "gp3",
+      "aws-zones": "us-east-1a",
+      "aws-image-ami": "ami-013da1cc4ae87618c",
       "local-ssd": "false",
-      "gce-image": "ubuntu-1804-bionic-v20200923",
-      "gce-zones": "us-east4-c",
-      "gce-pd-volume-type": "pd-ssd"
+      "aws-enable-multiple-stores": null
+    },
+    "benchArgs": {
+      "io": "-c fio-cc.cfg"
     }
   },
   {
-    "group": "pd-ssd-n2",
+    "group": "pd-ssd",
     "cloud": "gce",
     "machineTypes": {
       "n2-standard-2": {
@@ -183,7 +188,7 @@
         }
       },
       "n2-standard-8": {
-        "args": {
+        "roachprodArgs": {
           "gce-pd-volume-size": "500"
         },
         "benchArgs": {
@@ -191,8 +196,8 @@
         }
       },
       "n2-standard-16": {
-        "args": {
-          "aws-ebs-volume-size": "900"
+        "roachprodArgs": {
+          "gce-pd-volume-size": "900"
         },
         "benchArgs": {
           "tpcc": "-A 2500 -W 3500 -I 250 -d 10m"
@@ -204,6 +209,9 @@
       "gce-image": "ubuntu-1804-bionic-v20200923",
       "gce-zones": "us-east4-c",
       "gce-pd-volume-type": "pd-ssd"
+    },
+    "benchArgs": {
+      "io": "-c fio-cc.cfg"
     }
   }
 ]

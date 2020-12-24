@@ -216,12 +216,13 @@ func (f *fioAnalyzer) analyzeFIO(cloud CloudDetails, machineType string) error {
 		}
 
 		latest.modtime = info.ModTime()
-		data, err := ioutil.ReadFile(path.Join(filepath.Dir(r), "fio-results.json"))
+		resultsPath := path.Join(filepath.Dir(r), "fio-results.json")
+		data, err := ioutil.ReadFile(resultsPath)
 		if err != nil {
 			return err
 		}
 		if err := json.Unmarshal(data, &latest); err != nil {
-			return err
+			fmt.Printf("Error unmarshalling %s: %v", resultsPath, err)
 		}
 	}
 
