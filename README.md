@@ -22,7 +22,7 @@ _Note_: It would be possible to extend this binary to run on other platforms rel
 
 ## Staff
 
-**John Kendall and Andy Woods** for Product
+**John Kendall** for Product
 - Vision, structure, messaging, writing
 
 **Jessica Edwards** for Marketing
