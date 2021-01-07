@@ -22,14 +22,11 @@ _Note_: It would be possible to extend this binary to run on other platforms rel
 
 ## Staff
 
-**Andy Woods** for Product
+**John Kendall and Andy Woods** for Product
 - Vision, structure, messaging, writing
 
 **Jessica Edwards** for Marketing
 - Report production and promotion, messaging
-
-**John Kendall** for Product Marketing
-- Messaging, direction, and competitive landscape
 
 **Yevgeniy Miretsky** for Engineering
 - Data collection and aggregation
