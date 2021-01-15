@@ -6,6 +6,9 @@ In 2018, we produced a "Cloud Report", wherein we assessed the performance of AW
 
 This repo will let us aggregate and share data among team members, including processes and results. 
 
+* [Highlights from the 2021 Cloud Report](https://www.cockroachlabs.com/blog/2021-cloud-report/)
+* [2021 Cloud Report](https://www.cockroachlabs.com/guides/2021-cloud-report)
+
 
 
 ## Enclosed Binary
