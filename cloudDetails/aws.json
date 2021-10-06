@@ -8,12 +8,12 @@
       "m5ad.4xlarge": null,
       "m6gd.4xlarge": {
         "roachprodArgs": {
-          "aws-image-ami": "ami-0567cfa579580f324"
+          "aws-image-ami": "ami-09bc3af312d0310c2"
         }
       },
       "c6gd.4xlarge": {
         "roachprodArgs": {
-          "aws-image-ami": "ami-0567cfa579580f324"
+          "aws-image-ami": "ami-09bc3af312d0310c2"
         }
       },
       "c5d.4xlarge": null,
@@ -31,7 +31,7 @@
       "local-ssd": null,
       "aws-machine-type-ssd": "{{.MachineType}}",
       "aws-zones": "us-east-1a",
-      "aws-image-ami": "ami-013da1cc4ae87618c",
+      "aws-image-ami": "ami-089b5711e63812c2a",
       "local-ssd-no-ext4-barrier": "false",
       "aws-enable-multiple-stores": null
     },
@@ -48,12 +48,12 @@
       "m5a.4xlarge": null,
       "m6g.4xlarge": {
         "roachprodArgs": {
-          "aws-image-ami": "ami-0567cfa579580f324"
+          "aws-image-ami": "ami-09bc3af312d0310c2"
         }
       },
       "c6g.4xlarge": {
         "roachprodArgs": {
-          "aws-image-ami": "ami-0567cfa579580f324"
+          "aws-image-ami": "ami-09bc3af312d0310c2"
         }
       },
       "c5n.4xlarge": null,
@@ -67,7 +67,7 @@
       "aws-ebs-volume-type": "gp2",
       "aws-ebs-volume-size": "2500",
       "aws-zones": "us-east-1a",
-      "aws-image-ami": "ami-013da1cc4ae87618c",
+      "aws-image-ami": "ami-036490d46656c4818",
       "local-ssd": "false",
       "aws-enable-multiple-stores": null
     }
@@ -81,12 +81,12 @@
       "m5a.4xlarge": null,
       "m6g.4xlarge": {
         "roachprodArgs": {
-          "aws-image-ami": "ami-0567cfa579580f324"
+          "aws-image-ami": "ami-09bc3af312d0310c2"
         }
       },
       "c6g.4xlarge": {
         "roachprodArgs": {
-          "aws-image-ami": "ami-0567cfa579580f324"
+          "aws-image-ami": "ami-09bc3af312d0310c2"
         }
       },
       "c5n.4xlarge": null,
@@ -100,7 +100,7 @@
       "aws-ebs-volume-type": "io2",
       "aws-ebs-volume-size": "2500",
       "aws-zones": "us-east-1a",
-      "aws-image-ami": "ami-013da1cc4ae87618c",
+      "aws-image-ami": "ami-036490d46656c4818",
       "local-ssd": "false",
       "aws-ebs-iops": "16000",
       "aws-enable-multiple-stores": null
