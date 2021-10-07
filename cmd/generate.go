@@ -62,7 +62,7 @@ type scriptData struct {
 const driverTemplate = `#!/bin/bash
 
 CLOUD="{{.CloudDetails.Cloud}}"
-CLUSTER="$USER-{{.Cluster}}"
+CLUSTER="$CRL_USERNAME-{{.Cluster}}"
 NODES=4
 TMUX_SESSION="cloud-report"
 
