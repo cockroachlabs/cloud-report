@@ -104,7 +104,11 @@ function start_cockroach() {
    stores="$stores --store $s/cockroach"
   done
 
-	roachprod start "$CLUSTER":1-$((NODES-1)) --args="$stores --cache=0.25 --max-sql-memory=0.4" 
+  if [[ -z $stores ]]; then
+    stores="--store=/mnt/data1/cockroach"
+  fi
+
+  roachprod start "$CLUSTER":1-$((NODES-1)) --args="$stores --cache=0.25 --max-sql-memory=0.4" 
 }
 
 # Execute setup.sh script on the cluster to configure it
