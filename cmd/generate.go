@@ -107,10 +107,8 @@ function start_cockroach() {
   if [[ -z $stores ]]; then
     stores="--store=/mnt/data1/cockroach"
   fi
-  roachprod start "$CLUSTER":1-$((NODES-1)) --args="$stores --cache=0.25 --max-sql-memory=0.4" 
 
-  if (($NODES == 2))
-  then
+  if [[ $NODES == 2 ]]; then
   	roachprod start "$CLUSTER":1 --args="$stores --cache=0.25 --max-sql-memory=0.4"
   else
   	roachprod start "$CLUSTER":1-$((NODES-1)) --args="$stores --cache=0.25 --max-sql-memory=0.4"
