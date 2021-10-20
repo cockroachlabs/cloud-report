@@ -95,7 +95,7 @@ function upload_scripts() {
   fi
 }
 
-# Start cockroach cluster on nodes [1-3].
+# Start cockroach cluster on nodes [1-NODES-1].
 function start_cockroach() {
   # Build --store flags based on the number of disks.
   # Roachprod adds /mnt/data1/cockroach by itself, so, we'll pick up the other disks
@@ -107,8 +107,14 @@ function start_cockroach() {
   if [[ -z $stores ]]; then
     stores="--store=/mnt/data1/cockroach"
   fi
-
   roachprod start "$CLUSTER":1-$((NODES-1)) --args="$stores --cache=0.25 --max-sql-memory=0.4" 
+
+  if (($NODES == 2))
+  then
+  	roachprod start "$CLUSTER":1 --args="$stores --cache=0.25 --max-sql-memory=0.4"
+  else
+  	roachprod start "$CLUSTER":1-$((NODES-1)) --args="$stores --cache=0.25 --max-sql-memory=0.4"
+  fi
 }
 
 # Execute setup.sh script on the cluster to configure it
@@ -157,31 +163,67 @@ function fetch_bench_io_results() {
 
 # Run Netperf benchmark
 function bench_net() {
-  server=$(roachprod ip "$CLUSTER":4)
+  if [ $NODES -lt 2 ]
+  then
+    echo "NODES must be greater than 1 for this test"
+    exit 1
+  fi
+
+  server=$(roachprod ip "$CLUSTER":$NODES)
   port=1337
   # Start server
-  roachprod run "$CLUSTER":4 ./scripts/gen/network-netperf.sh -- -S -p $port
+  roachprod run "$CLUSTER":$NODES ./scripts/gen/network-netperf.sh -- -S -p $port
 
   # Start client
-  run_under_tmux "net" "$CLUSTER:3" "./scripts/gen/network-netperf.sh -s $server -p $port $net_extra_args"
+  run_under_tmux "net" "$CLUSTER:$((NODES-1))" "./scripts/gen/network-netperf.sh -s $server -p $port $net_extra_args"
 }
 
 # Wait for Netperf benchmark to complete and fetch results.
 function fetch_bench_net_results() {
-  roachprod run "$CLUSTER":3 ./scripts/gen/network-netperf.sh -- -w
-  roachprod get "$CLUSTER":3 ./netperf-results $(results_dir "netperf-results")	
+  if [ $NODES -lt 2 ]
+  then
+    echo "NODES must be greater than 1 for this test"
+    exit 1
+  fi
+
+  if [ $NODES -eq 2 ]
+  then
+    roachprod run "$CLUSTER":1 ./scripts/gen/network-netperf.sh -- -w
+    roachprod get "$CLUSTER":1 ./netperf-results $(results_dir "netperf-results")
+  else
+    roachprod run "$CLUSTER":3 ./scripts/gen/network-netperf.sh -- -w
+    roachprod get "$CLUSTER":3 ./netperf-results $(results_dir "netperf-results")
+  fi
 }
 
 # Run TPCC Benchmark
 function bench_tpcc() {
- start_cockroach
- pgurls=$(roachprod pgurl "$CLUSTER":1-$((NODES-1)))
- run_under_tmux "tpcc" "$CLUSTER:4" "./scripts/gen/tpcc.sh $tpcc_extra_args ${pgurls[@]}"
+  if [ $NODES -lt 2 ]
+  then
+    echo "NODES must be greater than 1 for this test"
+    exit 1
+  fi
+
+  start_cockroach
+  if [ $NODES -eq 2 ]
+  then
+    pgurls=$(roachprod pgurl "$CLUSTER":1)
+    run_under_tmux "tpcc" "$CLUSTER:2" "./scripts/gen/tpcc.sh $tpcc_extra_args ${pgurls[@]}"
+  else
+    pgurls=$(roachprod pgurl "$CLUSTER":1-$((NODES-1)))
+    run_under_tmux "tpcc" "$CLUSTER:$NODES" "./scripts/gen/tpcc.sh $tpcc_extra_args ${pgurls[@]}"
+  fi
 }
 
 function fetch_bench_tpcc_results() {
-  roachprod run "$CLUSTER":4 ./scripts/gen/tpcc.sh -- -w
-  roachprod get "$CLUSTER":4 ./tpcc-results $(results_dir "tpcc-results")	
+  if [ $NODES -lt 2 ]
+  then
+    echo "NODES must be greater than 1 for this test"
+    exit 1
+  else
+    roachprod run "$CLUSTER":$NODES ./scripts/gen/tpcc.sh -- -w
+    roachprod get "$CLUSTER":$NODES ./tpcc-results $(results_dir "tpcc-results")	
+  fi
 }
 
 # Destroy roachprod cluster
