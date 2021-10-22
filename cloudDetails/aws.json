@@ -1,73 +1,27 @@
 [
   {
-    "group": "local-ssd",
-    "cloud": "aws",
-    "machineTypes": {
-      "m5d.4xlarge": null,
-      "m5dn.4xlarge": null,
-      "m5ad.4xlarge": null,
-      "m6gd.4xlarge": {
-        "roachprodArgs": {
-          "aws-image-ami": "ami-09bc3af312d0310c2"
-        }
-      },
-      "c6gd.4xlarge": {
-        "roachprodArgs": {
-          "aws-image-ami": "ami-09bc3af312d0310c2"
-        }
-      },
-      "c5d.4xlarge": null,
-      "r5d.4xlarge": null,
-      "r5dn.4xlarge": null,
-      "r5ad.4xlarge": null,
-      "i3.4xlarge": null,
-      "i3en.6xlarge": {
-        "roachprodArgs" : {
-          "aws-cpu-options": "CoreCount=8,ThreadsPerCore=2"
-        }
-      }
-    },
-    "roachprodArgs": {
-      "local-ssd": null,
-      "aws-machine-type-ssd": "{{.MachineType}}",
-      "aws-zones": "us-east-1a",
-      "aws-image-ami": "ami-089b5711e63812c2a",
-      "local-ssd-no-ext4-barrier": "false",
-      "aws-enable-multiple-stores": null
-    },
-    "benchArgs": {
-      "io": "-s"
-    }
-  },
-  {
     "group": "ebs-gp2",
     "cloud": "aws",
     "machineTypes": {
-      "m5.4xlarge": null,
-      "m5n.4xlarge": null,
-      "m5a.4xlarge": null,
-      "m6g.4xlarge": {
-        "roachprodArgs": {
-          "aws-image-ami": "ami-09bc3af312d0310c2"
-        }
-      },
-      "c6g.4xlarge": {
-        "roachprodArgs": {
-          "aws-image-ami": "ami-09bc3af312d0310c2"
-        }
-      },
-      "c5n.4xlarge": null,
-      "c5a.4xlarge": null,
-      "x1e.4xlarge": null,
-      "r5.4xlarge": null,
-      "r5n.4xlarge": null,
-      "r5a.4xlarge": null
+      "m6i.2xlarge": null,
+      "m5a.2xlarge": null,
+      "m5n.2xlarge": null,
+      "m5.2xlarge": null,
+      "c5a.2xlarge": null,
+      "c5.2xlarge": null,
+      "c5n.2xlarge": null,
+      "r5a.2xlarge": null,
+      "r5.2xlarge": null,
+      "r5b.2xlarge": null,
+      "r5n.2xlarge": null
     },
     "roachprodArgs" : {
       "aws-ebs-volume-type": "gp2",
       "aws-ebs-volume-size": "2500",
       "aws-zones": "us-east-1a",
+      "west-aws-zones": "us-west-2a",
       "aws-image-ami": "ami-036490d46656c4818",
+      "west-aws-image-ami": "ami-0964546d3da97e3ab",
       "local-ssd": "false",
       "aws-enable-multiple-stores": null
     }
@@ -76,31 +30,25 @@
     "group": "ebs-io2",
     "cloud": "aws",
     "machineTypes": {
-      "m5.4xlarge": null,
-      "m5n.4xlarge": null,
-      "m5a.4xlarge": null,
-      "m6g.4xlarge": {
-        "roachprodArgs": {
-          "aws-image-ami": "ami-09bc3af312d0310c2"
-        }
-      },
-      "c6g.4xlarge": {
-        "roachprodArgs": {
-          "aws-image-ami": "ami-09bc3af312d0310c2"
-        }
-      },
-      "c5n.4xlarge": null,
-      "c5a.4xlarge": null,
-      "x1e.4xlarge": null,
-      "r5.4xlarge": null,
-      "r5n.4xlarge": null,
-      "r5a.4xlarge": null
+      "m6i.2xlarge": null,
+      "m5a.2xlarge": null,
+      "m5n.2xlarge": null,
+      "m5.2xlarge": null,
+      "c5a.2xlarge": null,
+      "c5.2xlarge": null,
+      "c5n.2xlarge": null,
+      "r5a.2xlarge": null,
+      "r5.2xlarge": null,
+      "r5b.2xlarge": null,
+      "r5n.2xlarge": null
     },
     "roachprodArgs" : {
       "aws-ebs-volume-type": "io2",
       "aws-ebs-volume-size": "2500",
       "aws-zones": "us-east-1a",
+      "west-aws-zones": "us-west-2a",
       "aws-image-ami": "ami-036490d46656c4818",
+      "west-aws-image-ami": "ami-0964546d3da97e3ab",
       "local-ssd": "false",
       "aws-ebs-iops": "16000",
       "aws-enable-multiple-stores": null

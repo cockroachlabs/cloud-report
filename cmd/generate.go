@@ -46,17 +46,21 @@ func init() {
 	generateCmd.Flags().StringVarP(&scriptsDir, "scripts-dir", "",
 		"./scripts", "directory containing scripts uploaded to cloud VMs that execute benchmarks.")
 	generateCmd.Flags().StringVarP(&lifetime, "lifetime", "l",
-		"24h", "cluster lifetime")
+		"4h", "cluster lifetime")
 }
 
 type scriptData struct {
 	CloudDetails
-	Cluster     string
-	Lifetime    string
-	MachineType string
-	ScriptsDir  string
-	EvaledArgs  string
-	BenchArgs   map[string]string
+	Cluster          string
+	Lifetime         string
+	MachineType      string
+	ScriptsDir       string
+	EvaledArgs       string
+	UsEastAmi        string
+	UsWestAmi        string
+	NodeEastLocation string
+	NodeWestLocation string
+	BenchArgs        map[string]string
 }
 
 const driverTemplate = `#!/bin/bash
@@ -65,6 +69,8 @@ CLOUD="{{.CloudDetails.Cloud}}"
 CLUSTER="$CRL_USERNAME-{{.Cluster}}"
 NODES=4
 TMUX_SESSION="cloud-report"
+WEST_CLUSTER="${CLUSTER}-west"
+WEST_CLUSTER_CREATED=
 
 set -ex
 scriptName=$(basename ${0%.*})
@@ -77,21 +83,33 @@ exec &> >(tee -a "$logdir/driver.log")
 # Create roachprod cluster
 function create_cluster() {
   roachprod create "$CLUSTER" -n $NODES --lifetime "{{.Lifetime}}" --clouds "$CLOUD" \
-    --$CLOUD-machine-type "{{.MachineType}}" {{.EvaledArgs}}
+    --$CLOUD-machine-type "{{.MachineType}}" {{.NodeEastLocation}} {{.EvaledArgs}} {{.UsEastAmi}}
   roachprod run "$CLUSTER" -- tmux new -s "$TMUX_SESSION" -d
+}
+
+# Create roachprod in us-west2
+function create_west_cluster() {
+  roachprod create "$WEST_CLUSTER" -u $USER -n $NODES --lifetime "4h" --clouds "$CLOUD" \
+    --$CLOUD-machine-type "{{.MachineType}}" {{.NodeWestLocation}} {{.EvaledArgs}} {{.UsWestAmi}}
+  roachprod run "$WEST_CLUSTER" -- tmux new -s "$TMUX_SESSION" -d
+  WEST_CLUSTER_CREATED=true
 }
 
 # Upload scripts to roachprod cluster
 function upload_scripts() {
-  roachprod run "$CLUSTER" rm  -- -rf ./scripts
-  roachprod put "$CLUSTER" {{.ScriptsDir}} scripts
-  roachprod run "$CLUSTER" chmod -- -R +x ./scripts
-  roachprod run "$CLUSTER" "rm -f ./cockroach"
+  roachprod run "$1" rm  -- -rf ./scripts
+  roachprod put "$1" {{.ScriptsDir}} scripts
+  roachprod run "$1" chmod -- -R +x ./scripts
+}
+
+# Load the cockroach binary to roachprod cluster
+function load_cockroach() {
+  roachprod run "$1" "rm -f ./cockroach"
   if [ -z "$cockroach_binary" ]
   then
-    roachprod stage "$CLUSTER" cockroach
+    roachprod stage "$1" cockroach
   else
-    roachprod put "$CLUSTER" "$cockroach_binary" "cockroach"
+    roachprod put "$1" "$cockroach_binary" "cockroach"
   fi
 }
 
@@ -117,7 +135,7 @@ function start_cockroach() {
 
 # Execute setup.sh script on the cluster to configure it
 function setup_cluster() {
-	roachprod run "$CLUSTER" sudo ./scripts/gen/setup.sh "$CLOUD"
+	roachprod run "$1" sudo ./scripts/gen/setup.sh "$CLOUD"
 }
 
 # executes command on a host using roachprod, under tmux session.
@@ -224,9 +242,31 @@ function fetch_bench_tpcc_results() {
   fi
 }
 
+function bench_cross_region_net() {
+  create_west_cluster
+  upload_scripts "$WEST_CLUSTER"
+  roachprod run ${WEST_CLUSTER}:1 "sudo apt-get update && sudo apt-get -y install netperf"
+
+  server_ip=$(roachprod ip ${CLUSTER}:1)
+  
+  port=1337
+  # Server
+  roachprod run ${CLUSTER}:1 ./scripts/gen/network-netperf.sh -- -S -p "$port"
+  # Cient
+  run_under_tmux "cross_region_net" ${WEST_CLUSTER}:1 "./scripts/gen/network-netperf.sh -s $server_ip -p $port $cross_region_net_extra_args"
+}
+
+function fetch_bench_cross_region_net_results() {
+  roachprod run ${WEST_CLUSTER}:1 ./scripts/gen/network-netperf.sh -- -w
+  roachprod get ${WEST_CLUSTER}:1 ./netperf-results $(results_dir "netperf-results")
+}
+
 # Destroy roachprod cluster
 function destroy_cluster() {
   roachprod destroy "$CLUSTER"
+  if [[ -n $WEST_CLUSTER_CREATED ]]; then
+    roachprod destroy "$WEST_CLUSTER"
+  fi
 }
 
 function usage() {
@@ -241,6 +281,7 @@ Usage: $0 [-b <bootstrap>]... [-w <workload>]... [-d] [-c cockroach_binary]
        -w cpu : Benchmark CPU
        -w io  : Benchmark IO
        -w net : Benchmark Net
+       -w cr_net : Benchmark Cross-region Net
        -w tpcc: Benchmark TPCC
        -w all : All of the above
    -c: Override cockroach binary to use.
@@ -249,6 +290,7 @@ Usage: $0 [-b <bootstrap>]... [-w <workload>]... [-d] [-c cockroach_binary]
    -N: additional network benchmark arguments
    -C: additional CPU benchmark arguments
    -T: additional TPCC benchmark arguments
+   -R: additional cross-region network benchmark arguments
    -n: override number of nodes in a cluster
    -d: Destroy cluster
 "
@@ -265,9 +307,10 @@ io_extra_args='{{with $arg := .BenchArgs.io}}{{$arg}}{{end}}'
 cpu_extra_args='{{with $arg := .BenchArgs.cpu}}{{$arg}}{{end}}'
 net_extra_args='{{with $arg := .BenchArgs.net}}{{$arg}}{{end}}'
 tpcc_extra_args='{{with $arg := .BenchArgs.tpcc}}{{$arg}}{{end}}'
+cross_region_net_extra_args='{{with $arg := .BenchArgs.cross_region_net}}{{$arg}}{{end}}'
 cockroach_binary=''
 
-while getopts 'c:b:w:dn:I:N:C:T:r' flag; do
+while getopts 'c:b:w:dn:I:N:C:T:R:r' flag; do
   case "${flag}" in
     b) case "${OPTARG}" in
         all)
@@ -287,8 +330,9 @@ while getopts 'c:b:w:dn:I:N:C:T:r' flag; do
          cpu) benchmarks+=("bench_cpu") ;;
          io) benchmarks+=("bench_io") ;;
          net) benchmarks+=("bench_net") ;;
+         cr_net) benchmarks+=("bench_cross_region_net") ;;
          tpcc) benchmarks+=("bench_tpcc") ;;
-         all) benchmarks+=("bench_cpu" "bench_io" "bench_net" "bench_tpcc") ;;
+         all) benchmarks+=("bench_cpu" "bench_io" "bench_net" "bench_tpcc" "bench_cross_region_net") ;;
          *) usage "Invalid -w value '${OPTARG}'";;
        esac
     ;;
@@ -299,6 +343,7 @@ while getopts 'c:b:w:dn:I:N:C:T:r' flag; do
     C) cpu_extra_args="${OPTARG}" ;;
     N) net_extra_args="${OPTARG}" ;;
     T) tpcc_extra_args="${OPTARG}" ;;
+    R) cross_region_net_extra_args="${OPTARG}" ;;
     *) usage ;;
   esac
 done
@@ -310,12 +355,13 @@ fi
 
 if [ -n "$do_upload" ];
 then
-  upload_scripts
+  upload_scripts $CLUSTER
+  load_cockroach $CLUSTER
 fi
 
 if [ -n "$do_setup" ];
 then
-  setup_cluster
+  setup_cluster $CLUSTER
 fi
 
 if [ -z "$f_resume" ]
@@ -415,9 +461,26 @@ func generateCloudScripts(cloud CloudDetails) error {
 			if buf.Len() > 0 {
 				buf.WriteByte(' ')
 			}
-			fmt.Fprintf(buf, "--%s", arg)
-			if len(val) > 0 {
-				fmt.Fprintf(buf, "=%q", val)
+			switch arg {
+			case "gce-zones", "aws-zones", "azure-locations":
+				if !(len(val) > 0) {
+					return fmt.Errorf("zone config for %s is no specified", arg)
+				}
+				templateArgs.NodeEastLocation = fmt.Sprintf("--%s=%q", arg, val)
+			case "west-gce-zones", "west-aws-zones", "west-azure-locations":
+				if !(len(val) > 0) {
+					return fmt.Errorf("zone config for %s is no specified", arg)
+				}
+				templateArgs.NodeWestLocation = fmt.Sprintf("--%s=%q", arg[5:], val)
+			case "aws-image-ami", "gce-image":
+				templateArgs.UsEastAmi = fmt.Sprintf("--%s=%q", arg, val)
+			case "west-aws-image-ami", "west-gce-image":
+				templateArgs.UsWestAmi = fmt.Sprintf("--%s=%q", arg[5:], val)
+			default:
+				fmt.Fprintf(buf, "--%s", arg)
+				if len(val) > 0 {
+					fmt.Fprintf(buf, "=%q", val)
+				}
 			}
 		}
 		templateArgs.EvaledArgs = buf.String()
