@@ -1,71 +1,77 @@
 [
     {
-        "group": "local-ssd",
-        "cloud": "gce",
-        "machineTypes": {
-            "n2-standard-16": null,
-            "n2d-standard-16": {
-                "roachprodArgs": {
-                    "gce-zones": "us-east1-c"
-                }
-            },
-            "n2-highmem-16": null,
-            "n2-highcpu-16": null,
-            "n2d-highcpu-16": {
-                "roachprodArgs": {
-                    "gce-zones": "us-east1-c"
-                }
-            },
-            "c2-standard-16": null,
-            "m1-ultramem-40":  null,
-            "n2-highmem-16":  null,
-            "n2d-highmem-16": {
-                "roachprodArgs": {
-                    "gce-zones": "us-east1-c"
-                }
-            }
-        },
-        "roachprodArgs": {
-            "local-ssd": null,
-            "gce-image": "ubuntu-2004-focal-v20210927",
-            "gce-zones": "us-east4-c",
-            "local-ssd-no-ext4-barrier": "false"
-        },
-        "benchArgs": {
-            "io": "-s"
-        }
-    },
-    {
         "group": "pd-ssd",
         "cloud": "gce",
         "machineTypes": {
-            "n2-standard-16": null,
-            "n2d-standard-16":  {
+            "n2-standard-8": null,
+            "n2d-standard-8":  {
                 "roachprodArgs": {
-                    "gce-zones": "us-east1-c"
+                    "gce-zones": "us-east1-c",
+                    "west-gce-zones": "us-west1-a"
                 }
             },
-            "n2-highmem-16": null,
-            "n2-highcpu-16": null,
-            "n2d-highcpu-16":  {
+
+            "n2-highcpu-8": null,
+            "n2d-highcpu-8":  {
                 "roachprodArgs": {
-                    "gce-zones": "us-east1-c"
+                    "gce-zones": "us-east1-c",
+                    "west-gce-zones": "us-west1-a"
                 }
             },
-            "c2-standard-16": null,
-            "m1-ultramem-40":  null,
-            "n2-highmem-16":  null,
-            "n2d-highmem-16": {
+            "c2-standard-8": null,
+            "n2-highmem-8": null,
+            "n2d-highmem-8": {
                 "roachprodArgs": {
-                    "gce-zones": "us-east1-c"
+                    "gce-zones": "us-east1-c",
+                    "west-gce-zones": "us-west1-a"
                 }
             }
         },
         "roachprodArgs": {
             "local-ssd": "false",
             "gce-image": "ubuntu-2004-focal-v20210927",
+            "west-gce-image": "ubuntu-2004-focal-v20210927",
             "gce-zones": "us-east4-c",
+            "west-gce-zones": "us-west1-a",
             "gce-pd-volume-type": "pd-ssd",
+            "gce-pd-volume-size": "2500"
+        }
+    },
+    {
+        "group": "pd-extreme",
+        "cloud": "gce",
+        "machineTypes": {
+            "n2-standard-8": null,
+            "n2d-standard-8":  {
+                "roachprodArgs": {
+                    "gce-zones": "us-east1-c",
+                    "west-gce-zones": "us-west1-a"
+                }
+            },
+
+            "n2-highcpu-8": null,
+            "n2d-highcpu-8":  {
+                "roachprodArgs": {
+                    "gce-zones": "us-east1-c",
+                    "west-gce-zones": "us-west1-a"
+                }
+            },
+            "c2-standard-8": null,
+            "n2-highmem-8": null,
+            "n2d-highmem-8": {
+                "roachprodArgs": {
+                    "gce-zones": "us-east1-c",
+                    "west-gce-zones": "us-west1-a"
+                }
+            }
+        },
+        "roachprodArgs": {
+            "local-ssd": "false",
+            "gce-image": "ubuntu-2004-focal-v20210927",
+            "west-gce-image": "ubuntu-2004-focal-v20210927",
+            "gce-zones": "us-east4-c",
+            "west-gce-zones": "us-west1-a",
+            "gce-pd-volume-type": "pd-extreme",
             "gce-pd-volume-size": "2500"
         }
     }

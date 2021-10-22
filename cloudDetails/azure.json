@@ -1,44 +1,23 @@
 [
   {
-    "group": "local-ssd",
-    "cloud": "azure",
-    "machineTypes": {
-      "Standard_D16ds_v4": null,
-      "Standard_D16as_v4": null,
-      "Standard_F16s_v2": null,
-      "Standard_E16ds_v4": null,
-      "Standard_E16as_v4":  null,
-      "Standard_L16s_v2": null,
-      "Standard_M16ms": null
-    },
-    "roachprodArgs": {
-      "local-ssd": "true",
-      "azure-locations": "eastus",
-      "azure-availability-zone": "2",
-      "local-ssd-no-ext4-barrier": "false"
-    },
-    "benchArgs": {
-      "io": "-s"
-    }
-  },
-  {
     "group": "premium-disk",
     "cloud": "azure",
     "machineTypes": {
-      "Standard_D16s_v4": null,
-      "Standard_D16ds_v4": null,
-      "Standard_D16as_v4": null,
-      "Standard_F16s_v2": null,
-      "Standard_E16s_v4": null,
-      "Standard_E16ds_v4": null,
-      "Standard_E16as_v4":  null,
-      "Standard_L16s_v2": null,
-      "Standard_M16ms": null
+      "Standard_D8ds_v4": null,
+      "Standard_D8ds_v5": null,
+      "Standard_D8as_v4": null,
+      "Standard_F8sv_v2": null,
+      "Standard_E8s_v4": null,
+      "Standard_E8s_v5": null,
+      "Standard_E8ds_v4": null,
+      "Standard_E8ds_v5": null,
+      "Standard_E8as_v4": null
     },
     "roachprodArgs": {
       "local-ssd": "false",
       "azure-network-disk-type": "premium-disk",
       "azure-locations": "eastus",
+      "west-azure-locations": "westus2",
       "azure-availability-zone": "2",
       "azure-volume-size": "2500",
       "azure-disk-caching": "read-only"
@@ -48,20 +27,21 @@
     "group": "ultra-disk",
     "cloud": "azure",
     "machineTypes": {
-      "Standard_D16s_v4": null,
-      "Standard_D16ds_v4": null,
-      "Standard_D16as_v4": null,
-      "Standard_F16s_v2": null,
-      "Standard_E16s_v4": null,
-      "Standard_E16ds_v4": null,
-      "Standard_E16as_v4":  null,
-      "Standard_L16s_v2": null,
-      "Standard_M16ms": null
+      "Standard_D8ds_v4": null,
+      "Standard_D8ds_v5": null,
+      "Standard_D8as_v4": null,
+      "Standard_F8sv_v2": null,
+      "Standard_E8s_v4": null,
+      "Standard_E8s_v5": null,
+      "Standard_E8ds_v4": null,
+      "Standard_E8ds_v5": null,
+      "Standard_E8as_v4": null
     },
     "roachprodArgs": {
       "local-ssd": "false",
       "azure-network-disk-type": "ultra-disk",
       "azure-locations": "eastus",
+      "west-azure-locations": "westus2",
       "azure-availability-zone": "2",
       "azure-volume-size": "2500",
 	  "azure-ultra-disk-iops": "16000"
