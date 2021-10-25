@@ -51,16 +51,16 @@ func init() {
 
 type scriptData struct {
 	CloudDetails
-	Cluster          string
-	Lifetime         string
-	MachineType      string
-	ScriptsDir       string
-	EvaledArgs       string
-	UsEastAmi        string
-	UsWestAmi        string
-	NodeEastLocation string
-	NodeWestLocation string
-	BenchArgs        map[string]string
+	Cluster             string
+	Lifetime            string
+	MachineType         string
+	ScriptsDir          string
+	EvaledArgs          string
+	DefaultAmi          string
+	AlterAmis           map[string]string
+	DefaultNodeLocation string
+	AlterNodeLocations  map[string]string
+	BenchArgs           map[string]string
 }
 
 const driverTemplate = `#!/bin/bash
@@ -83,14 +83,14 @@ exec &> >(tee -a "$logdir/driver.log")
 # Create roachprod cluster
 function create_cluster() {
   roachprod create "$CLUSTER" -n $NODES --lifetime "{{.Lifetime}}" --clouds "$CLOUD" \
-    --$CLOUD-machine-type "{{.MachineType}}" {{.NodeEastLocation}} {{.EvaledArgs}} {{.UsEastAmi}}
+    --$CLOUD-machine-type "{{.MachineType}}" {{.DefaultNodeLocation}} {{.EvaledArgs}} {{.DefaultAmi}}
   roachprod run "$CLUSTER" -- tmux new -s "$TMUX_SESSION" -d
 }
 
 # Create roachprod in us-west2
 function create_west_cluster() {
   roachprod create "$WEST_CLUSTER" -u $USER -n $NODES --lifetime "4h" --clouds "$CLOUD" \
-    --$CLOUD-machine-type "{{.MachineType}}" {{.NodeWestLocation}} {{.EvaledArgs}} {{.UsWestAmi}}
+    --$CLOUD-machine-type "{{.MachineType}}" {{.AlterNodeLocations.west}} {{.EvaledArgs}} {{.AlterAmis.west}}
   roachprod run "$WEST_CLUSTER" -- tmux new -s "$TMUX_SESSION" -d
   WEST_CLUSTER_CREATED=true
 }
@@ -441,12 +441,14 @@ func generateCloudScripts(cloud CloudDetails) error {
 		clusterName = validClusterName.ReplaceAllString(clusterName, "-")
 
 		templateArgs := scriptData{
-			CloudDetails: cloud,
-			Cluster:      clusterName,
-			Lifetime:     lifetime,
-			MachineType:  machineType,
-			ScriptsDir:   scriptsDir,
-			BenchArgs:    combineArgs(machineConfig.BenchArgs, cloud.BenchArgs),
+			CloudDetails:       cloud,
+			Cluster:            clusterName,
+			Lifetime:           lifetime,
+			MachineType:        machineType,
+			ScriptsDir:         scriptsDir,
+			BenchArgs:          combineArgs(machineConfig.BenchArgs, cloud.BenchArgs),
+			AlterNodeLocations: make(map[string]string),
+			AlterAmis:          make(map[string]string),
 		}
 
 		// Evaluate roachprodArgs: those maybe templatized.
@@ -466,20 +468,19 @@ func generateCloudScripts(cloud CloudDetails) error {
 				if !(len(val) > 0) {
 					return fmt.Errorf("zone config for %s is no specified", arg)
 				}
-				templateArgs.NodeEastLocation = fmt.Sprintf("--%s=%q", arg, val)
-			case "west-gce-zones", "west-aws-zones", "west-azure-locations":
-				if !(len(val) > 0) {
-					return fmt.Errorf("zone config for %s is no specified", arg)
-				}
-				templateArgs.NodeWestLocation = fmt.Sprintf("--%s=%q", arg[5:], val)
+				templateArgs.DefaultNodeLocation = fmt.Sprintf("--%s=%q", arg, val)
 			case "aws-image-ami", "gce-image":
-				templateArgs.UsEastAmi = fmt.Sprintf("--%s=%q", arg, val)
-			case "west-aws-image-ami", "west-gce-image":
-				templateArgs.UsWestAmi = fmt.Sprintf("--%s=%q", arg[5:], val)
+				templateArgs.DefaultAmi = fmt.Sprintf("--%s=%q", arg, val)
 			default:
-				fmt.Fprintf(buf, "--%s", arg)
-				if len(val) > 0 {
-					fmt.Fprintf(buf, "=%q", val)
+				if region, label := analyzeAlterZone(arg); label != "" {
+					templateArgs.AlterNodeLocations[region] = fmt.Sprintf("--%s=%q", label, val)
+				} else if region, label := analyzeAlterImage(arg); label != "" {
+					templateArgs.AlterAmis[region] = fmt.Sprintf("--%s=%q", label, val)
+				} else {
+					fmt.Fprintf(buf, "--%s", arg)
+					if len(val) > 0 {
+						fmt.Fprintf(buf, "=%q", val)
+					}
 				}
 			}
 		}
@@ -499,4 +500,31 @@ func generateCloudScripts(cloud CloudDetails) error {
 	}
 
 	return nil
+}
+
+// analyzeAlterZone is to parse argument that may contain zone location information for an alternative region.
+func analyzeAlterZone(arg string) (string, string) {
+	gceZoneRegex := regexp.MustCompile(`^(.+)-(gce-zones)$`)
+	awsZoneRegex := regexp.MustCompile(`^(.+)-(aws-zones)$`)
+	azureLocationRegex := regexp.MustCompile(`^(.+)-(azure-locations)$`)
+	zoneRegex := []*regexp.Regexp{gceZoneRegex, awsZoneRegex, azureLocationRegex}
+	for _, regex := range zoneRegex {
+		if regex.MatchString(arg) {
+			return regex.FindStringSubmatch(arg)[1], regex.FindStringSubmatch(arg)[2]
+		}
+	}
+	return "", ""
+}
+
+// analyzeAlterImage is to parse argument that may contain image information for an alternative region.
+func analyzeAlterImage(arg string) (string, string) {
+	awsImageRegex := regexp.MustCompile(`^(.+)-(aws-image-ami)$`)
+	gceImageRegex := regexp.MustCompile(`^(.+)-(gce-image)$`)
+	ImageRegex := []*regexp.Regexp{awsImageRegex, gceImageRegex}
+	for _, regex := range ImageRegex {
+		if regex.MatchString(arg) {
+			return regex.FindStringSubmatch(arg)[1], regex.FindStringSubmatch(arg)[2]
+		}
+	}
+	return "", ""
 }
