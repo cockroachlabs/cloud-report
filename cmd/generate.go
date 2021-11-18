@@ -25,7 +25,6 @@ import (
 
 var scriptsDir string
 var lifetime string
-var usage string
 
 // generateCmd represents the generate command
 var generateCmd = &cobra.Command{
@@ -48,14 +47,12 @@ func init() {
 		"./scripts", "directory containing scripts uploaded to cloud VMs that execute benchmarks.")
 	generateCmd.Flags().StringVarP(&lifetime, "lifetime", "l",
 		"4h", "cluster lifetime")
-	generateCmd.Flags().StringVar(&usage, "usage", "cloud-report-2022", "usage label")
 }
 
 type scriptData struct {
 	CloudDetails
 	Cluster          string
 	Lifetime         string
-	Usage            string
 	MachineType      string
 	ScriptsDir       string
 	EvaledArgs       string
@@ -86,16 +83,14 @@ exec &> >(tee -a "$logdir/driver.log")
 # Create roachprod cluster
 function create_cluster() {
   roachprod create "$CLUSTER" -n $NODES --lifetime "{{.Lifetime}}" --clouds "$CLOUD" \
-    --$CLOUD-machine-type "{{.MachineType}}" {{.NodeEastLocation}} {{.EvaledArgs}} {{.UsEastAmi}} \
-    --label {{.Usage}}
+    --$CLOUD-machine-type "{{.MachineType}}" {{.NodeEastLocation}} {{.EvaledArgs}} {{.UsEastAmi}}
   roachprod run "$CLUSTER" -- tmux new -s "$TMUX_SESSION" -d
 }
 
 # Create roachprod in us-west2
 function create_west_cluster() {
   roachprod create "$WEST_CLUSTER" -u $USER -n $NODES --lifetime "4h" --clouds "$CLOUD" \
-    --$CLOUD-machine-type "{{.MachineType}}" {{.NodeWestLocation}} {{.EvaledArgs}} {{.UsWestAmi}} \
-    --label {{.Usage}}
+    --$CLOUD-machine-type "{{.MachineType}}" {{.NodeWestLocation}} {{.EvaledArgs}} {{.UsWestAmi}}
   roachprod run "$WEST_CLUSTER" -- tmux new -s "$TMUX_SESSION" -d
   WEST_CLUSTER_CREATED=true
 }
@@ -449,7 +444,6 @@ func generateCloudScripts(cloud CloudDetails) error {
 			CloudDetails: cloud,
 			Cluster:      clusterName,
 			Lifetime:     lifetime,
-			Usage:        fmt.Sprintf("usage=%s", usage),
 			MachineType:  machineType,
 			ScriptsDir:   scriptsDir,
 			BenchArgs:    combineArgs(machineConfig.BenchArgs, cloud.BenchArgs),

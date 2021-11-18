@@ -1,6 +1,6 @@
 [
   {
-    "group": "ebs-gp2",
+    "group": "ebs-gp3",
     "cloud": "aws",
     "machineTypes": {
       "m6i.2xlarge": null,
@@ -16,7 +16,7 @@
       "r5n.2xlarge": null
     },
     "roachprodArgs" : {
-      "aws-ebs-volume-type": "gp2",
+      "aws-ebs-volume-type": "gp3",
       "aws-ebs-volume-size": "2500",
       "aws-zones": "us-east-1a",
       "west-aws-zones": "us-west-2a",
