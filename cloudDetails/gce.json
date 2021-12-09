@@ -4,7 +4,14 @@
         "cloud": "gce",
         "machineTypes": {
             "n2-standard-8": null,
+            "n2-standard-32": null,
             "n2d-standard-8":  {
+                "roachprodArgs": {
+                    "gce-zones": "us-east1-c",
+                    "west-gce-zones": "us-west1-a"
+                }
+            },
+            "n2d-standard-32":  {
                 "roachprodArgs": {
                     "gce-zones": "us-east1-c",
                     "west-gce-zones": "us-west1-a"
@@ -12,15 +19,65 @@
             },
 
             "n2-highcpu-8": null,
+            "n2-highcpu-32": null,
+
             "n2d-highcpu-8":  {
                 "roachprodArgs": {
                     "gce-zones": "us-east1-c",
                     "west-gce-zones": "us-west1-a"
                 }
             },
-            "c2-standard-8": null,
-            "n2-highmem-8": null,
+            "n2d-highcpu-32":  {
+                "roachprodArgs": {
+                    "gce-zones": "us-east1-c",
+                    "west-gce-zones": "us-west1-a"
+                }
+            },
+
+            "c2-standard-8": {
+                "benchArgs": {
+                    "tpcc": "-A 1000 -W 1200 -I 100 -d 10m"
+                }
+            },
+            "c2-standard-30": {
+                "benchArgs": {
+                    "tpcc": "-A 1000 -W 1200 -I 100 -d 10m"
+                }
+            },
+
+            "n2-highmem-8": {
+                "roachprodArgs": {
+                    "gce-zones": "us-east1-c",
+                    "west-gce-zones": "us-west1-a"
+                }
+            },
+            "n2-highmem-32": {
+                "roachprodArgs": {
+                    "gce-zones": "us-east1-c",
+                    "west-gce-zones": "us-west1-a"
+                }
+            },
+
             "n2d-highmem-8": {
+                "roachprodArgs": {
+                    "gce-zones": "us-east1-c",
+                    "west-gce-zones": "us-west1-a"
+                }
+            },
+            "n2d-highmem-32": {
+                "roachprodArgs": {
+                    "gce-zones": "us-east1-c",
+                    "west-gce-zones": "us-west1-a"
+                }
+            },
+
+            "n2-custom-8-32768": {
+                "roachprodArgs": {
+                    "gce-zones": "us-east1-c",
+                    "west-gce-zones": "us-west1-a"
+                }
+            },
+            "n2-custom-32-131072": {
                 "roachprodArgs": {
                     "gce-zones": "us-east1-c",
                     "west-gce-zones": "us-west1-a"
@@ -42,7 +99,14 @@
         "cloud": "gce",
         "machineTypes": {
             "n2-standard-8": null,
+            "n2-standard-32": null,
             "n2d-standard-8":  {
+                "roachprodArgs": {
+                    "gce-zones": "us-east1-c",
+                    "west-gce-zones": "us-west1-a"
+                }
+            },
+            "n2d-standard-32":  {
                 "roachprodArgs": {
                     "gce-zones": "us-east1-c",
                     "west-gce-zones": "us-west1-a"
@@ -50,15 +114,65 @@
             },
 
             "n2-highcpu-8": null,
+            "n2-highcpu-32": null,
+
             "n2d-highcpu-8":  {
                 "roachprodArgs": {
                     "gce-zones": "us-east1-c",
                     "west-gce-zones": "us-west1-a"
                 }
             },
-            "c2-standard-8": null,
-            "n2-highmem-8": null,
+            "n2d-highcpu-32":  {
+                "roachprodArgs": {
+                    "gce-zones": "us-east1-c",
+                    "west-gce-zones": "us-west1-a"
+                }
+            },
+
+            "c2-standard-8": {
+                "benchArgs": {
+                    "tpcc": "-A 1000 -W 1200 -I 100 -d 10m"
+                }
+            },
+            "c2-standard-30": {
+                "benchArgs": {
+                    "tpcc": "-A 1000 -W 1200 -I 100 -d 10m"
+                }
+            },
+
+            "n2-highmem-8": {
+                "roachprodArgs": {
+                    "gce-zones": "us-east1-c",
+                    "west-gce-zones": "us-west1-a"
+                }
+            },
+            "n2-highmem-32": {
+                "roachprodArgs": {
+                    "gce-zones": "us-east1-c",
+                    "west-gce-zones": "us-west1-a"
+                }
+            },
+
             "n2d-highmem-8": {
+                "roachprodArgs": {
+                    "gce-zones": "us-east1-c",
+                    "west-gce-zones": "us-west1-a"
+                }
+            },
+            "n2d-highmem-32": {
+                "roachprodArgs": {
+                    "gce-zones": "us-east1-c",
+                    "west-gce-zones": "us-west1-a"
+                }
+            },
+
+            "n2-custom-8-32768": {
+                "roachprodArgs": {
+                    "gce-zones": "us-east1-c",
+                    "west-gce-zones": "us-west1-a"
+                }
+            },
+            "n2-custom-32-131072": {
                 "roachprodArgs": {
                     "gce-zones": "us-east1-c",
                     "west-gce-zones": "us-west1-a"
@@ -76,4 +190,3 @@
         }
     }
 ]
-
