@@ -45,8 +45,11 @@ func init() {
 
 	generateCmd.Flags().StringVarP(&scriptsDir, "scripts-dir", "",
 		"./scripts", "directory containing scripts uploaded to cloud VMs that execute benchmarks.")
+	// We need to define a longer life-time as we introduced vcpu8 machine
+	// types, which start with a low tpcc store number, and take longer to
+	// complete a run.
 	generateCmd.Flags().StringVarP(&lifetime, "lifetime", "l",
-		"4h", "cluster lifetime")
+		"6h", "cluster lifetime")
 }
 
 type scriptData struct {
@@ -89,7 +92,7 @@ function create_cluster() {
 
 # Create roachprod in us-west2
 function create_west_cluster() {
-  roachprod create "$WEST_CLUSTER" -u $USER -n $NODES --lifetime "4h" --clouds "$CLOUD" \
+  roachprod create "$WEST_CLUSTER" -u $USER -n $NODES --lifetime "6h" --clouds "$CLOUD" \
     --$CLOUD-machine-type "{{.MachineType}}" {{.NodeWestLocation}} {{.EvaledArgs}} {{.UsWestAmi}}
   roachprod run "$WEST_CLUSTER" -- tmux new -s "$TMUX_SESSION" -d
   WEST_CLUSTER_CREATED=true
