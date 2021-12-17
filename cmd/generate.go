@@ -47,7 +47,8 @@ func init() {
 		"./scripts", "directory containing scripts uploaded to cloud VMs that execute benchmarks.")
 	// We need to define a longer life-time as we introduced vcpu8 machine
 	// types, which start with a low tpcc store number, and take longer to
-	// complete a run.
+	// complete a run, and managing multiple parallel run across a batch of
+	// tests also takes longer to finish the batch.
 	generateCmd.Flags().StringVarP(&lifetime, "lifetime", "l",
 		"6h", "cluster lifetime")
 }
@@ -85,6 +86,7 @@ exec &> >(tee -a "$logdir/driver.log")
 
 # Create roachprod cluster
 function create_cluster() {
+
   roachprod create "$CLUSTER" -n $NODES --lifetime "{{.Lifetime}}" --clouds "$CLOUD" \
     --$CLOUD-machine-type "{{.MachineType}}" {{.NodeEastLocation}} {{.EvaledArgs}} {{.UsEastAmi}}
   roachprod run "$CLUSTER" -- tmux new -s "$TMUX_SESSION" -d
@@ -102,6 +104,8 @@ function create_west_cluster() {
 function upload_scripts() {
   roachprod run "$1" rm  -- -rf ./scripts
   roachprod put "$1" {{.ScriptsDir}} scripts
+  echo "{{.MachineType}}" > "machinetype.txt"
+  roachprod put "$1" "machinetype.txt" "machinetype.txt"
   roachprod run "$1" chmod -- -R +x ./scripts
 }
 
