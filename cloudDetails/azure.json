@@ -28,7 +28,6 @@
         }
       },
       "Standard_E32as_v4": null,
-      "Standard_E32as_v5": null,
       "Standard_E8as_v5": {
         "roachprodArgs": {
           "azure-locations": "eastus",
@@ -108,7 +107,13 @@
         }
       },
       "Standard_E32as_v4": null,
-      "Standard_E32as_v5": null,
+      "Standard_E32as_v5": {
+        "roachprodArgs": {
+          "azure-locations": "eastus",
+          "west-azure-locations": "westus2",
+          "azure-availability-zone": "1"
+        }
+      },
       "Standard_E8as_v5": {
         "roachprodArgs": {
           "azure-locations": "eastus",
