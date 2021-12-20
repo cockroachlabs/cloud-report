@@ -86,8 +86,8 @@
         },
         "roachprodArgs": {
             "local-ssd": "false",
-            "gce-image": "ubuntu-2004-focal-v20210927",
-            "west-gce-image": "ubuntu-2004-focal-v20210927",
+            "gce-image": "ubuntu-2004-focal-v20211212",
+            "west-gce-image": "ubuntu-2004-focal-v20211212",
             "gce-zones": "us-east4-c",
             "west-gce-zones": "us-west1-a",
             "gce-pd-volume-type": "pd-ssd",
@@ -181,8 +181,8 @@
         },
         "roachprodArgs": {
             "local-ssd": "false",
-            "gce-image": "ubuntu-2004-focal-v20210927",
-            "west-gce-image": "ubuntu-2004-focal-v20210927",
+            "gce-image": "ubuntu-2004-focal-v20211212",
+            "west-gce-image": "ubuntu-2004-focal-v20211212",
             "gce-zones": "us-east4-c",
             "west-gce-zones": "us-west1-a",
             "gce-pd-volume-type": "pd-extreme",
