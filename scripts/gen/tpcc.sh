@@ -71,6 +71,41 @@ mkdir "$logdir"
 exec &> >(tee -a "$logdir/script.log")
 
 cd "$HOME"
+
+# Due to a bug in tpcc test (https://github.com/cockroachdb/cockroach/issues/73751),
+# we have to set fixed upper boundary, if these limits are set above the actual
+# limit a machine type can handle, the test will fail with COMMAND_ERROR, instead
+# of exiting gracefully with error code or error message.
+# These current set of limits are carefully tuned and pretty accurately reflect the
+# limits of the machine types. You have to do the same tuning for new machine types
+# until this bug is resolved with desired behavior.
+vcpu=`grep -Pc '^processor\t' /proc/cpuinfo`
+machinetype=`cat machinetype.txt`
+if [ $vcpu -gt 16 ]
+then
+  f_active=2750
+  f_inc=250
+  if [[ $machinetype =~ r5.\.8xlarge || $machinetype =~ m5a\.8xlarge ]];
+  then
+    echo "Decreasing upper limit because of machine type $machinetype."
+    f_warehouses=3250
+  else
+    f_warehouses=3500
+  fi
+elif [ $vcpu -eq 16 ]
+then
+  f_active=2500
+  f_warehouses=3500
+  f_inc=2500
+else
+  if [[ $machinetype =~ m6i.2xlarge ]];
+  then
+    echo "Decreasing upper limit because of machine type $machinetype."
+    f_active=500
+    f_warehouses=900
+  fi
+fi
+
 if [ -z "$f_skip_load" ]
 then
   echo "configuring the cluster for fast import..."
@@ -83,41 +118,13 @@ then
   ";
 
   echo "importing..."
-  ./cockroach workload fixtures import tpcc --warehouses="$f_warehouses" "${pgurls[0]}"
+  ./cockroach workload fixtures import tpcc --warehouses="$f_warehouses" --active-warehouses="$f_active" "${pgurls[0]}"
   echo "done importing"
 fi
 
 if [[ $f_inc == 0 ]];
 then
   f_inc=$f_warehouses
-fi
-
-# Due to a bug in tpcc test (https://github.com/cockroachdb/cockroach/issues/73751),
-# we have to set fixed upper boundary, if these limits are set above the actual
-# limit a machine type can handle, the test will fail with COMMAND_ERROR, instead
-# of exiting gracefully with error code or error message.
-# These current set of limits are carefully tuned and pretty accurately reflect the
-# limits of the machine types. You have to do the same tuning for new machine types
-# until this bug is resolved with desired behavior.
-vcpu=`grep -Pc '^processor\t' /proc/cpuinfo`
-hostname=`hostname`
-if [ $vcpu -gt 16 ]
-then
-  f_active=2750
-  f_warehouses=3500
-  f_inc=250
-elif [$vcpu -eq 16]
-then
-  f_active=2500
-  f_warehouses=3500
-  f_inc=2500
-else
-  if echo "$hostname" | grep -q "m6i-2xlarge"
-  then
-    f_active=500
-    f_warehouses=900
-    echo "This is m6i-2xlarge type"
-  fi
 fi
 
 for active in `seq $f_active $f_inc $f_warehouses`
