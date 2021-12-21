@@ -46,9 +46,11 @@ func init() {
 
 	generateCmd.Flags().StringVarP(&scriptsDir, "scripts-dir", "",
 		"./scripts", "directory containing scripts uploaded to cloud VMs that execute benchmarks.")
-	// We need to define a longer life-time as we introduced vcpu8 machine
-	// types, which start with a low tpcc store number, and take longer to
-	// complete a run.
+	// We need to define a longer life-time as in general a tpcc run takes 2-3
+	// hours to finish, and occasionally we hit issue(s) which require a re-run
+	// of tpcc, overall more than 4 hours is needed to run a whole test suite,
+	// managing multiple parallel run across a batch of tests also takes longer
+	// to finish a whole batch.
 	generateCmd.Flags().StringVarP(&lifetime, "lifetime", "l",
 		"6h", "cluster lifetime")
 	generateCmd.Flags().StringVar(&usage, "usage", "cloud-report-2022", "the usage label for roachprod create. Default: cloud-report-2022")
@@ -107,6 +109,8 @@ function create_west_cluster() {
 function upload_scripts() {
   roachprod run "$1" rm  -- -rf ./scripts
   roachprod put "$1" {{.ScriptsDir}} scripts
+  echo "{{.MachineType}}" > "machinetype.txt"
+  roachprod put "$1" "machinetype.txt" "machinetype.txt"
   roachprod run "$1" chmod -- -R +x ./scripts
 }
 

@@ -79,12 +79,14 @@ cd "$HOME"
 # These current set of limits are carefully tuned and pretty accurately reflect the
 # limits of the machine types. You have to do the same tuning for new machine types
 # until this bug is resolved with desired behavior.
-vcpu=`grep -Pc '^processor\t' /proc/cpuinfo`
-machinetype=`cat machinetype.txt`
+vcpu=$(grep -Pc '^processor\t' /proc/cpuinfo)
+machinetype=$(cat machinetype.txt)
 if [ $vcpu -gt 16 ]
 then
   f_active=2750
   f_inc=250
+  # Reg expression "r5.\.8xlarge" is for current r5 vcpu32 machine family
+  # including r5a.8xlarge, r5b.8xlarge and r5n.8xlarge.
   if [[ $machinetype =~ r5.\.8xlarge || $machinetype =~ m5a\.8xlarge ]];
   then
     echo "Decreasing upper limit because of machine type $machinetype."
@@ -122,6 +124,8 @@ then
   echo "done importing"
 fi
 
+# if f_inc is not specified, then we set it equal to f_warehouses, this means
+# we just need to run one iteration.
 if [[ $f_inc == 0 ]];
 then
   f_inc=$f_warehouses
