@@ -189,6 +189,17 @@ function fetch_bench_io_results() {
   roachprod get "$CLUSTER":1 ./fio-results $(results_dir "fio-results")
 }
 
+# Run IO Fsync benchmark
+function bench_iofsync() {
+  run_under_tmux "iofsync" "$CLUSTER:1" "./scripts/gen/fio_fsync.sh $iofsync_extra_args"
+}
+
+# Wait for IO FSync benchmark top finish and retrieve results.
+function fetch_bench_iofsync_results() {
+  roachprod run "$CLUSTER":1 ./scripts/gen/fio_fsync.sh -- -w
+  roachprod get "$CLUSTER":1 ./fio-fsync-results $(results_dir "fio-fsync-results")
+}
+
 # Run Netperf benchmark
 function bench_net() {
   if [ $NODES -lt 2 ]
@@ -292,6 +303,7 @@ Usage: $0 [-b <bootstrap>]... [-w <workload>]... [-d] [-c cockroach_binary]
    -w: Specify workloads (benchmarks) to execute.
        -w cpu : Benchmark CPU
        -w io  : Benchmark IO
+       -w iofsync : Benchmark IO Fsync
        -w net : Benchmark Net
        -w cr_net : Benchmark Cross-region Net
        -w tpcc: Benchmark TPCC
@@ -299,6 +311,7 @@ Usage: $0 [-b <bootstrap>]... [-w <workload>]... [-d] [-c cockroach_binary]
    -c: Override cockroach binary to use.
    -r: Do not start benchmarks specified by -w.  Instead, resume waiting for their completion.
    -I: additional IO benchmark arguments
+   -F: additional IO Fsync benchmark arguments
    -N: additional network benchmark arguments
    -C: additional CPU benchmark arguments
    -T: additional TPCC benchmark arguments
@@ -316,13 +329,14 @@ do_upload=''
 do_setup=''
 do_destroy=''
 io_extra_args='{{with $arg := .BenchArgs.io}}{{$arg}}{{end}}'
+iofsync_extra_args='{{with $arg := .BenchArgs.iofsync}}{{$arg}}{{end}}'
 cpu_extra_args='{{with $arg := .BenchArgs.cpu}}{{$arg}}{{end}}'
 net_extra_args='{{with $arg := .BenchArgs.net}}{{$arg}}{{end}}'
 tpcc_extra_args='{{with $arg := .BenchArgs.tpcc}}{{$arg}}{{end}}'
 cross_region_net_extra_args='{{with $arg := .BenchArgs.cross_region_net}}{{$arg}}{{end}}'
 cockroach_binary=''
 
-while getopts 'c:b:w:dn:I:N:C:T:R:r' flag; do
+while getopts 'c:b:w:dn:I:F:N:C:T:R:r' flag; do
   case "${flag}" in
     b) case "${OPTARG}" in
         all)
@@ -341,10 +355,11 @@ while getopts 'c:b:w:dn:I:N:C:T:R:r' flag; do
     w) case "${OPTARG}" in
          cpu) benchmarks+=("bench_cpu") ;;
          io) benchmarks+=("bench_io") ;;
+         iofsync) benchmarks+=("bench_iofsync") ;;
          net) benchmarks+=("bench_net") ;;
          cr_net) benchmarks+=("bench_cross_region_net") ;;
          tpcc) benchmarks+=("bench_tpcc") ;;
-         all) benchmarks+=("bench_cpu" "bench_io" "bench_net" "bench_tpcc" "bench_cross_region_net") ;;
+         all) benchmarks+=("bench_cpu" "bench_io" "bench_io_fsync" "bench_net" "bench_tpcc" "bench_cross_region_net") ;;
          *) usage "Invalid -w value '${OPTARG}'";;
        esac
     ;;
@@ -352,6 +367,7 @@ while getopts 'c:b:w:dn:I:N:C:T:R:r' flag; do
     r) f_resume='true' ;;
     n) NODES="${OPTARG}" ;;
     I) io_extra_args="${OPTARG}" ;;
+    F) iofsync_extra_args="${OPTARG}" ;;
     C) cpu_extra_args="${OPTARG}" ;;
     N) net_extra_args="${OPTARG}" ;;
     T) tpcc_extra_args="${OPTARG}" ;;
