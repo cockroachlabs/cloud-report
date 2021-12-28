@@ -167,6 +167,37 @@ function results_dir() {
   echo "$logdir/$1.$(date +%Y%m%d.%T)"
 }
 
+function copy_result_with_retry() {
+  # There is a random roachprod issue that we recently identified:
+  # After a test finished successfully in a host, the following "roachprod get"
+  # command didn't copy the result files correctly from the host node to the
+  # client, so the target result directory ended up with all empty files.
+  # This function will copy result files from host to client and check that
+  # there is no empty result file in the target directory. It will retry the
+  # copy step if the previous copy failed with any empty result files, the test
+  # will fail if after retry it still couldn't copy file correctly.
+  #
+  target_dir=$(results_dir "$2")
+  for i in {1..3}
+  do
+    roachprod get "$1" "./$2" "$target_dir"
+
+    result=$(find "$target_dir" -empty -type f -name "*.log")
+    if [ -z "$result" ]
+    then
+      echo "Test passed!"
+      break
+    fi
+    echo "Copy file round "$i" failed, found empty result file(s):\n$result"
+    sleep 5s
+  done
+
+  if [ ! -z "$result" ]
+  then
+    echo "Copy failed with empty result file(s) in "$target_dir", test failed!"
+  fi
+}
+
 # Run CPU benchmark
 function bench_cpu() {
   run_under_tmux "cpu" "$CLUSTER:1"  "./scripts/gen/cpu.sh $cpu_extra_args"
@@ -174,8 +205,9 @@ function bench_cpu() {
 
 # Wait for CPU benchmark to finish and retrieve results.
 function fetch_bench_cpu_results() {
-  roachprod run "$CLUSTER":1  ./scripts/gen/cpu.sh -- -w
-  roachprod get "$CLUSTER":1 ./coremark-results $(results_dir "coremark-results")
+  node="$CLUSTER":1
+  roachprod run $node ./scripts/gen/cpu.sh -- -w
+  copy_result_with_retry $node "coremark-results"
 }
 
 # Run FIO benchmark
@@ -185,8 +217,9 @@ function bench_io() {
 
 # Wait for FIO benchmark top finish and retrieve results.
 function fetch_bench_io_results() {
-  roachprod run "$CLUSTER":1 ./scripts/gen/fio.sh -- -w
-  roachprod get "$CLUSTER":1 ./fio-results $(results_dir "fio-results")
+  node="$CLUSTER":1
+  roachprod run $node ./scripts/gen/fio.sh -- -w
+  copy_result_with_retry $node "fio-results"
 }
 
 # Run Netperf benchmark
@@ -214,14 +247,15 @@ function fetch_bench_net_results() {
     exit 1
   fi
 
+  target_dir=$(results_dir "netperf-results")
   if [ $NODES -eq 2 ]
   then
-    roachprod run "$CLUSTER":1 ./scripts/gen/network-netperf.sh -- -w
-    roachprod get "$CLUSTER":1 ./netperf-results $(results_dir "netperf-results")
+    node="$CLUSTER":1
   else
-    roachprod run "$CLUSTER":3 ./scripts/gen/network-netperf.sh -- -w
-    roachprod get "$CLUSTER":3 ./netperf-results $(results_dir "netperf-results")
+    node="$CLUSTER":3
   fi
+  roachprod run $node ./scripts/gen/network-netperf.sh -- -w
+  copy_result_with_retry $node "netperf-results"
 }
 
 # Run TPCC Benchmark
@@ -248,10 +282,11 @@ function fetch_bench_tpcc_results() {
   then
     echo "NODES must be greater than 1 for this test"
     exit 1
-  else
-    roachprod run "$CLUSTER":$NODES ./scripts/gen/tpcc.sh -- -w
-    roachprod get "$CLUSTER":$NODES ./tpcc-results $(results_dir "tpcc-results")	
   fi
+
+  node="$CLUSTER":$NODES
+  roachprod run $node ./scripts/gen/tpcc.sh -- -w
+  copy_result_with_retry $node "tpcc-results"
 }
 
 function bench_cross_region_net() {
@@ -269,8 +304,9 @@ function bench_cross_region_net() {
 }
 
 function fetch_bench_cross_region_net_results() {
-  roachprod run ${WEST_CLUSTER}:1 ./scripts/gen/network-netperf.sh -- -w
-  roachprod get ${WEST_CLUSTER}:1 ./netperf-results $(results_dir "netperf-results")
+  node=${WEST_CLUSTER}:1
+  roachprod run $node ./scripts/gen/network-netperf.sh -- -w
+  copy_result_with_retry $node "netperf-results"
 }
 
 # Destroy roachprod cluster
