@@ -124,7 +124,7 @@ function load_cockroach() {
     roachprod stage "$1" cockroach
   elif [[ $cockroach_binary =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
     echo "INFO: staging release version $cockroach_binary of cockroach binary"
-    roachprod stage "$1" cockroach release "$cockroach_binary"
+    roachprod stage "$1" release "$cockroach_binary"
   else
     echo "WARN: staging unknown version of cockroach binary from local path: $cockroach_binary"
     roachprod put "$1" "$cockroach_binary" "cockroach"
