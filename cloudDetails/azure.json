@@ -3,9 +3,14 @@
     "group": "premium-disk",
     "cloud": "azure",
     "machineTypes": {
-      "Standard_D8as_v4": null,
+      "Standard_D8as_v4": {
+        "roachprodArgs": {
+          "azure-volume-size": "1000"
+        }
+      },
       "Standard_D8as_v5":  {
         "roachprodArgs": {
+          "azure-volume-size": "1000",
           "azure-locations": "eastus",
           "west-azure-locations": "westus2",
           "azure-availability-zone": "1"
@@ -19,9 +24,14 @@
           "azure-availability-zone": "1"
         }
       },
-      "Standard_E8as_v4": null,
+      "Standard_E8as_v4": {
+        "roachprodArgs": {
+          "azure-volume-size": "1000"
+        }
+      },
       "Standard_E8as_v5": {
         "roachprodArgs": {
+          "azure-volume-size": "1000",
           "azure-locations": "eastus",
           "west-azure-locations": "westus2",
           "azure-availability-zone": "1"
@@ -37,6 +47,7 @@
       },
       "Standard_E8bs_v5": {
         "roachprodArgs": {
+          "azure-volume-size": "1000",
           "azure-locations": "eastus",
           "west-azure-locations": "westus2",
           "azure-availability-zone": "1"
@@ -49,9 +60,14 @@
           "azure-availability-zone": "1"
         }
       },
-      "Standard_E8s_v4": null,
+      "Standard_E8s_v4": {
+        "roachprodArgs": {
+          "azure-volume-size": "1000"
+        }
+      },
       "Standard_E8s_v5":  {
         "roachprodArgs": {
+          "azure-volume-size": "1000",
           "azure-locations": "eastus",
           "west-azure-locations": "westus2",
           "azure-availability-zone": "1"
@@ -65,8 +81,24 @@
           "azure-availability-zone": "1"
         }
       },
-      "Standard_F8s_v2": null,
-      "Standard_F32s_v2": null
+      "Standard_F8s_v2": {
+        "roachprodArgs": {
+          "azure-volume-size": "1000"
+        }
+      },
+      "Standard_F32s_v2": null,
+      "Standard_D8s_v4": {
+        "roachprodArgs": {
+          "azure-volume-size": "1000"
+        }
+      },
+      "Standard_D32s_v4": null,
+      "Standard_D8s_v5": {
+        "roachprodArgs": {
+          "azure-volume-size": "1000"
+        }
+      },
+      "Standard_D32s_v5": null
     },
     "roachprodArgs": {
       "local-ssd": "false",
@@ -82,9 +114,14 @@
     "group": "ultra-disk",
     "cloud": "azure",
     "machineTypes": {
-      "Standard_D8as_v4": null,
+      "Standard_D8as_v4": {
+        "roachprodArgs": {
+          "azure-volume-size": "1000"
+        }
+      },
       "Standard_D8as_v5":  {
         "roachprodArgs": {
+          "azure-volume-size": "1000",
           "azure-locations": "eastus",
           "west-azure-locations": "westus2",
           "azure-availability-zone": "1"
@@ -98,9 +135,14 @@
           "azure-availability-zone": "1"
         }
       },
-      "Standard_E8as_v4": null,
+      "Standard_E8as_v4": {
+        "roachprodArgs": {
+          "azure-volume-size": "1000"
+        }
+      },
       "Standard_E8as_v5": {
         "roachprodArgs": {
+          "azure-volume-size": "1000",
           "azure-locations": "eastus",
           "west-azure-locations": "westus2",
           "azure-availability-zone": "1"
@@ -114,15 +156,9 @@
           "azure-availability-zone": "1"
         }
       },
-      "Standard_E8as_v5": {
-        "roachprodArgs": {
-          "azure-locations": "eastus",
-          "west-azure-locations": "westus2",
-          "azure-availability-zone": "1"
-        }
-      },
       "Standard_E8bs_v5": {
         "roachprodArgs": {
+          "azure-volume-size": "1000",
           "azure-locations": "eastus",
           "west-azure-locations": "westus2",
           "azure-availability-zone": "1"
@@ -135,9 +171,14 @@
           "azure-availability-zone": "1"
         }
       },
-      "Standard_E8s_v4": null,
+      "Standard_E8s_v4": {
+        "roachprodArgs": {
+          "azure-volume-size": "1000"
+        }
+      },
       "Standard_E8s_v5":  {
         "roachprodArgs": {
+          "azure-volume-size": "1000",
           "azure-locations": "eastus",
           "west-azure-locations": "westus2",
           "azure-availability-zone": "1"
@@ -151,8 +192,24 @@
           "azure-availability-zone": "1"
         }
       },
-      "Standard_F8s_v2": null,
-      "Standard_F32s_v2": null
+      "Standard_F8s_v2": {
+        "roachprodArgs": {
+          "azure-volume-size": "1000"
+        }
+      },
+      "Standard_F32s_v2": null,
+      "Standard_D8s_v4": {
+        "roachprodArgs": {
+          "azure-volume-size": "1000"
+        }
+      },
+      "Standard_D32s_v4": null,
+      "Standard_D8s_v5": {
+        "roachprodArgs": {
+          "azure-volume-size": "1000"
+        }
+      },
+      "Standard_D32s_v5": null
     },
     "roachprodArgs": {
       "local-ssd": "false",
@@ -161,7 +218,7 @@
       "west-azure-locations": "westus2",
       "azure-availability-zone": "2",
       "azure-volume-size": "2500",
-	  "azure-ultra-disk-iops": "16000"
+      "azure-ultra-disk-iops": "16000"
     }
   }
 ]
