@@ -5,7 +5,7 @@ pidfile="$HOME/tpcc-bench.pid"
 f_force=''
 f_wait=''
 f_active=1000
-f_warehouses=3000
+f_warehouses=2500
 f_skip_load=''
 f_duration="30m"
 f_inc=50
@@ -41,6 +41,11 @@ function is_special_type() {
       f_active=4500
       f_warehouses=5100
       echo "Special type $1";;
+    m5\.8xlarge)
+      best_result=5400
+      f_active=5100
+      f_warehouses=5700
+      echo "Special type $1";;
   	*)
       special_type=0
       current_result_good=0
@@ -66,10 +71,11 @@ logdir="$HOME/tpcc-results"
 
 if [ -n "$f_wait" ];
 then
-   exec sh -c "
+  exec sh -c "
     ( test -f '$logdir/success' ||
       (tail --pid \$(cat $pidfile) -f /dev/null && test -f '$logdir/success')
     ) || (echo 'TPC-C benchmark did not complete successfully.  Check logs'; exit 1)"
+  echo "Removing invalid result files..."
 fi
 
 
@@ -112,14 +118,20 @@ if [ $vcpu -gt 16 ]
 then
   if [[ special_type -eq 0 ]];
   then
-    f_active=3000
     # Reg expression "r5.\.8xlarge" is for current r5 vcpu32 machine family
     # including r5a.8xlarge, r5b.8xlarge and r5n.8xlarge.
-    if [[ $machinetype =~ r5.\.8xlarge || $machinetype =~ m5a\.8xlarge ]];
+    if [[ $machinetype =~ r5\.8xlarge || $machinetype =~ m5a\.8xlarge ]];
     then
-      echo "Decreasing upper limit because of machine type $machinetype."
-      f_warehouses=5500
+      echo "Decreasing boundary range because of machine type $machinetype."
+      f_active=2500
+      f_warehouses=3500
+    elif [[ $machinetype =~ r5.\.8xlarge || $machinetype =~ m6i\.8xlarge ]];
+    then
+      echo "Decreasing boundary range because of machine type $machinetype."
+      f_active=2000
+      f_warehouses=4000
     else
+      f_active=3000
       f_warehouses=6500
     fi
   fi
@@ -132,11 +144,20 @@ then
   f_active=2500
   f_warehouses=4500
 else
-  if [[ $machinetype =~ m6i.2xlarge ]];
+  # Besides the speical machine type rules we defined in `is_special_type`, we
+  # still need this section to define another set of special machine type
+  # rules with a narrower boundary, otherwise the tpcc run will fail due to
+  # various error due to limited resources the machine types have.
+  if [[ $machinetype =~ m6i\.2xlarge || $machinetype =~ m5n\.2xlarge || $machinetype =~ n2d-highmem-8 ]];
   then
     echo "Decreasing upper limit because of machine type $machinetype."
-    ((f_active-=300))
-    ((f_warehouses-=300))
+    ((f_active-=200))
+    ((f_warehouses-=800))
+  elif [[ $machinetype =~ n2.*-highcpu-8 ]];
+  then
+    echo "Decreasing upper limit because of machine type $machinetype."
+    ((f_active-=200))
+    ((f_warehouses-=1400))
   fi
 fi
 
@@ -202,7 +223,13 @@ then
   done
 fi
 
-rm "${logdir}"/tpcc-results*.txt
+result_files=(`find "${logdir}"/ -maxdepth 1 -name "tpcc-results*.txt"`)
+if [ ${#result_files[@]} -gt 0 ];
+then
+  rm "${logdir}"/tpcc-results*.txt
+  echo "Deleted exploration run result."
+fi
+
 
 # if valid result is found in the previous test round, we start an official
 # run after adjusting of the starting point to a multiple of one hundred.
@@ -241,7 +268,7 @@ then
         if [[ $(tail -1 "$report" | awk '{if($3+0 > 87){print "pass"}}') != "pass" ]];
         then
           echo "TPCC on $active failed"
-          #todo
+          # TODO: xun
           #rm "$report"
           current_result_good=0
           all_result_good=0
@@ -284,8 +311,8 @@ then
   done
 fi
 
-tpcc_files=$(find . -type f -name "tpcc*.txt")
-if [ -z "$tpcc_files" ]
+result_files=(`find "${logdir}"/ -maxdepth 1 -name "tpcc-results*.txt"`)
+if [ -z "$result_files" ]
 then
   echo "tpcc couldn't run, please adjust the boundary and run again."
 elif [ $has_result_good -eq 0 ]
