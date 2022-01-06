@@ -89,6 +89,7 @@ then
     ( test -f '$logdir/success' ||
       (tail --pid \$(cat $pidfile) -f /dev/null && test -f '$logdir/success')
     ) || (echo 'TPC-C benchmark did not complete successfully.  Check logs'; exit 1)"
+  echo "Removing invalid result files..."
 fi
 
 
