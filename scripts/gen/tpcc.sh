@@ -7,7 +7,7 @@ f_wait=''
 f_active=800
 f_warehouses=1200
 f_skip_load=''
-f_duration="30m"
+f_duration="5m"
 f_inc=200
 
 function usage() {
@@ -83,8 +83,8 @@ vcpu=$(grep -Pc '^processor\t' /proc/cpuinfo)
 machinetype=$(cat machinetype.txt)
 if [ $vcpu -gt 16 ]
 then
-  f_active=2750
-  f_inc=250
+  f_active=3547
+  f_inc=1
   # Reg expression "r5.\.8xlarge" is for current r5 vcpu32 machine family
   # including r5a.8xlarge, r5b.8xlarge and r5n.8xlarge.
   if [[ $machinetype =~ r5.\.8xlarge || $machinetype =~ m5a\.8xlarge ]];
@@ -92,7 +92,7 @@ then
     echo "Decreasing upper limit because of machine type $machinetype."
     f_warehouses=3250
   else
-    f_warehouses=3500
+    f_warehouses=3560
   fi
 elif [ $vcpu -eq 16 ]
 then
@@ -131,6 +131,8 @@ then
   f_inc=$f_warehouses
 fi
 
+echo "Iterating from $f_active until $f_warehouses"
+
 for active in `seq $f_active $f_inc $f_warehouses`
 do
   echo "Running TPCC: $active"
@@ -141,7 +143,7 @@ do
     --ramp=1m --duration="$f_duration" \
     "${pgurls[@]}" > "$report"
 
-    if [[ $(tail -1 "$report" | awk '{if($3 > 85 && $7 < 10000){print "pass"}}') != "pass" ]];
+    if [[ $(tail -1 "$report" | awk '{if(int($3) > 25){print "pass"}}') != "pass" ]];
     then
       break
     fi

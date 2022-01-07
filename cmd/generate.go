@@ -119,8 +119,14 @@ function load_cockroach() {
   roachprod run "$1" "rm -f ./cockroach"
   if [ -z "$cockroach_binary" ]
   then
+    cockroach_version=$(curl -s -i https://edge-binaries.cockroachdb.com/cockroach/cockroach.linux-gnu-amd64.LATEST |grep location|awk -F"/" '{print $NF}')
+    echo "WARN: staging latest cockroach binary from master: $cockroach_version"
     roachprod stage "$1" cockroach
+  elif [[ $cockroach_binary =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    echo "INFO: staging release version $cockroach_binary of cockroach binary"
+    roachprod stage "$1" release "$cockroach_binary"
   else
+    echo "WARN: staging unknown version of cockroach binary from local path: $cockroach_binary"
     roachprod put "$1" "$cockroach_binary" "cockroach"
   fi
 }
@@ -332,7 +338,7 @@ Usage: $0 [-b <bootstrap>]... [-w <workload>]... [-d] [-c cockroach_binary]
        -w cr_net : Benchmark Cross-region Net
        -w tpcc: Benchmark TPCC
        -w all : All of the above
-   -c: Override cockroach binary to use.
+   -c: Override cockroach binary to stage (local path to binary or release version)
    -r: Do not start benchmarks specified by -w.  Instead, resume waiting for their completion.
    -I: additional IO benchmark arguments
    -N: additional network benchmark arguments
