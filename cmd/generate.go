@@ -188,8 +188,8 @@ function copy_result_with_retry() {
   do
     roachprod get "$1" "./$2" "$target_dir"
 
-    result=$(find "$target_dir" -empty -type f -name "*.log")
-    if [ -z "$result" ]
+    result_files=$(find "$target_dir" -empty -type f -name "*.log")
+    if [ -z "$result_files" ]
     then
       echo "Test passed!"
       break
@@ -198,9 +198,23 @@ function copy_result_with_retry() {
     sleep 5s
   done
 
-  if [ ! -z "$result" ]
+  if [ ! -z "$result_files" ]
   then
     echo "Copy failed with empty result file(s) in "$target_dir", test failed!"
+  fi
+
+  if [ "$2" == "tpcc-results" ]
+  then
+    result_files=$(find "$target_dir" -type f -name "*.txt")
+    for result_file in $result_files
+    do
+      if [[ $(tail -1 "$result_file" | awk '{if(int($3) > 87){print "pass"}}') != "pass" ]];
+      then
+      	# Instead of deleting invalid result files, we rename them for auditing
+      	# and validation purpose.
+        mv $result_file "$result_file.bak"
+      fi
+    done
   fi
 }
 

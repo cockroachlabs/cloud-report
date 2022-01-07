@@ -35,7 +35,12 @@ function is_special_type() {
       best_result=5400
       f_active=5100
       f_warehouses=5700
-  		echo "Special type $1";;
+      echo "Special type $1";;
+    m5n\.2xlarge)
+      best_result=1850
+      f_active=1500
+      f_warehouses=2200
+      echo "Special type $1";;
     m5n\.8xlarge)
       best_result=4800
       f_active=4500
@@ -45,6 +50,11 @@ function is_special_type() {
       best_result=5400
       f_active=5100
       f_warehouses=5700
+      echo "Special type $1";;
+    Standard_D8s_v4)
+      best_result=1800
+      f_active=1500
+      f_warehouses=2100
       echo "Special type $1";;
   	*)
       special_type=0
@@ -114,50 +124,50 @@ vcpu=$(grep -Pc '^processor\t' /proc/cpuinfo)
 machinetype=$(cat machinetype.txt)
 
 is_special_type $machinetype
-if [ $vcpu -gt 16 ]
+if [[ $special_type -eq 0 ]];
 then
-  if [[ special_type -eq 0 ]];
+  if [ $vcpu -gt 16 ]
   then
-    # Reg expression "r5.\.8xlarge" is for current r5 vcpu32 machine family
-    # including r5a.8xlarge, r5b.8xlarge and r5n.8xlarge.
-    if [[ $machinetype =~ r5\.8xlarge || $machinetype =~ m5a\.8xlarge ]];
+      # Reg expression "r5.\.8xlarge" is for current r5 vcpu32 machine family
+      # including r5a.8xlarge, r5b.8xlarge and r5n.8xlarge.
+      if [[ $machinetype =~ r5\.8xlarge || $machinetype =~ m5a\.8xlarge ]];
+      then
+        echo "Decreasing boundary range because of machine type $machinetype."
+        f_active=2500
+        f_warehouses=3500
+      elif [[ $machinetype =~ r5.\.8xlarge || $machinetype =~ m6i\.8xlarge ]];
+      then
+        echo "Decreasing boundary range because of machine type $machinetype."
+        f_active=2000
+        f_warehouses=4000
+      else
+        f_active=3000
+        f_warehouses=6500
+      fi
+  elif [ $vcpu -eq 16 ]
+  then
+    # We didn't run vcp16 types for 2022, this setting is just some educated
+    # guess on possible initial boundary after the significantly modified
+    # algorithm could explore the real boundary of machine types, need to further
+    # tune and adjust to the boundary settings when conducting runs on vcpu16.
+    f_active=2500
+    f_warehouses=4500
+  else
+    # Besides the speical machine type rules we defined in `is_special_type`, we
+    # still need this section to define another set of special machine type
+    # rules with a narrower boundary, otherwise the tpcc run will fail due to
+    # various error due to limited resources the machine types have.
+    if [[ $machinetype =~ m6i\.2xlarge || $machinetype =~ m5n\.2xlarge || $machinetype =~ n2d-highmem-8 ]];
     then
-      echo "Decreasing boundary range because of machine type $machinetype."
-      f_active=2500
-      f_warehouses=3500
-    elif [[ $machinetype =~ r5.\.8xlarge || $machinetype =~ m6i\.8xlarge ]];
+      echo "Decreasing upper limit because of machine type $machinetype."
+      ((f_active-=200))
+      ((f_warehouses-=800))
+    elif [[ $machinetype =~ n2.*-highcpu-8 ]];
     then
-      echo "Decreasing boundary range because of machine type $machinetype."
-      f_active=2000
-      f_warehouses=4000
-    else
-      f_active=3000
-      f_warehouses=6500
+      echo "Decreasing upper limit because of machine type $machinetype."
+      ((f_active-=500))
+      ((f_warehouses-=1700))
     fi
-  fi
-elif [ $vcpu -eq 16 ]
-then
-  # We didn't run vcp16 types for 2022, this setting is just some educated
-  # guess on possible initial boundary after the significantly modified
-  # algorithm could explore the real boundary of machine types, need to further
-  # tune and adjust to the boundary settings when conducting runs on vcpu16.
-  f_active=2500
-  f_warehouses=4500
-else
-  # Besides the speical machine type rules we defined in `is_special_type`, we
-  # still need this section to define another set of special machine type
-  # rules with a narrower boundary, otherwise the tpcc run will fail due to
-  # various error due to limited resources the machine types have.
-  if [[ $machinetype =~ m6i\.2xlarge || $machinetype =~ m5n\.2xlarge || $machinetype =~ n2d-highmem-8 ]];
-  then
-    echo "Decreasing upper limit because of machine type $machinetype."
-    ((f_active-=200))
-    ((f_warehouses-=800))
-  elif [[ $machinetype =~ n2.*-highcpu-8 ]];
-  then
-    echo "Decreasing upper limit because of machine type $machinetype."
-    ((f_active-=200))
-    ((f_warehouses-=1400))
   fi
 fi
 
@@ -190,7 +200,7 @@ fi
 # cause kv errors and end the test, so we need to handle them differently.
 tpcc_files=""
 has_good_result=0
-if [[ special_type -eq 0 ]];
+if [[ $special_type -eq 0 ]];
 then
   l=$f_active
   r=$f_warehouses
@@ -206,7 +216,7 @@ then
 
       # awk uses lexicographic order by default when doing comparison, we
       # need to force it to use number comparison.
-      if [[ $(tail -1 "$report" | awk '{if($3+0 > 87){print "pass"}}') != "pass" ]];
+      if [[ $(tail -1 "$report" | awk '{if(int($3) > 87){print "pass"}}') != "pass" ]];
       then
         echo "Test TPCC on $mid failed"
         ((r=mid-f_inc))
@@ -265,11 +275,9 @@ then
         --ramp=3m --duration="30m" \
         "${pgurls[@]}" > "$report"
 
-        if [[ $(tail -1 "$report" | awk '{if($3+0 > 87){print "pass"}}') != "pass" ]];
+        if [[ $(tail -1 "$report" | awk '{if(int($3) > 87){print "pass"}}') != "pass" ]];
         then
           echo "TPCC on $active failed"
-          # TODO: xun
-          #rm "$report"
           current_result_good=0
           all_result_good=0
           break
@@ -281,7 +289,7 @@ then
           # various kv errors such as Error: error in newOrder error. To deal
           # with this issue and prevent loss of the existing success result, we
           # write the success file when we have a first success test round.
-          if [[ has_result_good -eq 0 ]]
+          if [[ $has_result_good -eq 0 ]]
           then
             touch "$logdir/success"
             has_result_good=1
@@ -318,7 +326,7 @@ then
 elif [ $has_result_good -eq 0 ]
 then
   echo "tpcc result has invalid efc value, please adjust the boundary and run again."
-elif [ all_result_good -eq 1 ]
+elif [ $all_result_good -eq 1 ]
 then
   echo "tpcc result has too high efc values, please adjust the boundary and run again."
 fi
