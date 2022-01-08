@@ -179,22 +179,7 @@
           "azure-volume-size": "1000"
         }
       },
-      "Standard_E8s_v5":  {
-        "roachprodArgs": {
-          "azure-volume-size": "1000",
-          "azure-locations": "eastus",
-          "west-azure-locations": "westus2",
-          "azure-availability-zone": "1"
-        }
-      },
       "Standard_E32s_v4": null,
-      "Standard_E32s_v5": {
-        "roachprodArgs": {
-          "azure-locations": "eastus",
-          "west-azure-locations": "westus2",
-          "azure-availability-zone": "1"
-        }
-      },
       "Standard_F8s_v2": {
         "roachprodArgs": {
           "azure-volume-size": "1000"
@@ -206,13 +191,7 @@
           "azure-volume-size": "1000"
         }
       },
-      "Standard_D32s_v4": null,
-      "Standard_D8s_v5": {
-        "roachprodArgs": {
-          "azure-volume-size": "1000"
-        }
-      },
-      "Standard_D32s_v5": null
+      "Standard_D32s_v4": null
     },
     "roachprodArgs": {
       "local-ssd": "false",
