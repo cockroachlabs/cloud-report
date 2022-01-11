@@ -93,10 +93,6 @@ function create_cluster() {
   roachprod create "$CLUSTER" -n $NODES --lifetime "{{.Lifetime}}" --clouds "$CLOUD" \
     --$CLOUD-machine-type "{{.MachineType}}" {{.NodeEastLocation}} {{.EvaledArgs}} {{.UsEastAmi}} \
     --label {{.Usage}}
-  
-  echo "---- start of cpu info for cluster $CLUSTER ----"
-  roachprod run "$CLUSTER":1 -- cat /proc/cpuinfo
-  echo "---- end of epu info for cluster $CLUSTER ----"
 
   roachprod run "$CLUSTER" -- tmux new -s "$TMUX_SESSION" -d
 }
@@ -107,9 +103,6 @@ function create_west_cluster() {
     --$CLOUD-machine-type "{{.MachineType}}" {{.NodeWestLocation}} {{.EvaledArgs}} {{.UsWestAmi}} \
     --label {{.Usage}}
 
-  echo "---- start of cpu info for cluster $WEST_CLUSTER ----"
-  roachprod run "$WEST_CLUSTER":1 -- cat /proc/cpuinfo
-  echo "---- end of cpu info for cluster $WEST_CLUSTER ----"
   roachprod run "$WEST_CLUSTER" -- tmux new -s "$TMUX_SESSION" -d
   WEST_CLUSTER_CREATED=true
 }
@@ -163,6 +156,8 @@ function start_cockroach() {
 # Execute setup.sh script on the cluster to configure it
 function setup_cluster() {
 	roachprod run "$1" sudo ./scripts/gen/setup.sh "$CLOUD"
+	roachprod run "$1":1 -- cpufetch -s legacy|awk -F"@" '{print $NF}'|tr -d ' '|awk NF > "$logdir"/"$1"_cpu_info.txt
+    roachprod run "$1":1 -- lscpu |grep "MHz" >> "$logdir"/"$1"_cpu_info.txt
 }
 
 # executes command on a host using roachprod, under tmux session.
