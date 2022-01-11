@@ -21,10 +21,12 @@ packages=(
     libpq-dev cgroup-tools
     fio netperf
     sysstat unzip jq
+    snapd
 )
 
 sudo apt-get update
 sudo apt-get -y install "${packages[@]}"
+sudo snap install cpufetch
 chmod 755 cockroach
 chown -R ubuntu /mnt/data*
 
