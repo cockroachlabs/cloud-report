@@ -119,14 +119,8 @@ function load_cockroach() {
   roachprod run "$1" "rm -f ./cockroach"
   if [ -z "$cockroach_binary" ]
   then
-    cockroach_version=$(curl -s -i https://edge-binaries.cockroachdb.com/cockroach/cockroach.linux-gnu-amd64.LATEST |grep location|awk -F"/" '{print $NF}')
-    echo "WARN: staging a stable cockroach binary from master with hash: 5ac733bb4927020bc1c52da24b2591742fde8e1f"
-    roachprod stage "$1" cockroach 5ac733bb4927020bc1c52da24b2591742fde8e1f
-  elif [[ $cockroach_binary =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-    echo "INFO: staging release version $cockroach_binary of cockroach binary"
-    roachprod stage "$1" release "$cockroach_binary"
+    roachprod stage "$1" cockroach
   else
-    echo "WARN: staging unknown version of cockroach binary from local path: $cockroach_binary"
     roachprod put "$1" "$cockroach_binary" "cockroach"
   fi
 }
@@ -188,8 +182,8 @@ function copy_result_with_retry() {
   do
     roachprod get "$1" "./$2" "$target_dir"
 
-    result_files=$(find "$target_dir" -empty -type f -name "*.log")
-    if [ -z "$result_files" ]
+    result=$(find "$target_dir" -empty -type f -name "*.log")
+    if [ -z "$result" ]
     then
       echo "Test passed!"
       break
@@ -198,23 +192,9 @@ function copy_result_with_retry() {
     sleep 5s
   done
 
-  if [ ! -z "$result_files" ]
+  if [ ! -z "$result" ]
   then
     echo "Copy failed with empty result file(s) in "$target_dir", test failed!"
-  fi
-
-  if [ "$2" == "tpcc-results" ]
-  then
-    result_files=$(find "$target_dir" -type f -name "*.txt")
-    for result_file in $result_files
-    do
-      if [[ $(tail -1 "$result_file" | awk '{if(int($3) > 87){print "pass"}}') != "pass" ]];
-      then
-      	# Instead of deleting invalid result files, we rename them for auditing
-      	# and validation purpose.
-        mv $result_file "$result_file.bak"
-      fi
-    done
   fi
 }
 
