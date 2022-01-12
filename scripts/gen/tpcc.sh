@@ -266,7 +266,11 @@ then
   then
     ((l-=f_inc))
   fi
-  ((l-=f_inc*7))
+
+  # Short time exploration run target doesn't quite predict long time official
+  # run target, need to make proper adjustment. This adjustment should make
+  # most machine types' runs successful.
+  ((l-=350))
   ((h=l+100))
 
   for i in {1..4}
@@ -321,7 +325,7 @@ then
     elif [[ $has_result_good -eq 0 ]]
     then
       ((h=l-f_inc))
-      ((l=h-f_inc*5))
+      ((l=h-250))
       echo "No result is good, decrease boundary to $l-$h and retry."
     else
       echo "Find optimal result, end the test."

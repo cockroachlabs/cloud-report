@@ -122,13 +122,8 @@ function load_cockroach() {
   if [ -z "$cockroach_binary" ]
   then
     cockroach_version=$(curl -s -i https://edge-binaries.cockroachdb.com/cockroach/cockroach.linux-gnu-amd64.LATEST |grep location|awk -F"/" '{print $NF}')
-<<<<<<< HEAD
-    echo "WARN: staging latest cockroach binary from master: $cockroach_version"
-    roachprod stage "$1" cockroach
-=======
     echo "WARN: staging a stable cockroach binary from master with hash: 5ac733bb4927020bc1c52da24b2591742fde8e1f"
     roachprod stage "$1" cockroach 5ac733bb4927020bc1c52da24b2591742fde8e1f
->>>>>>> [CR-68] Various improvements on tpcc test to achieve optimal test result
   elif [[ $cockroach_binary =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
     echo "INFO: staging release version $cockroach_binary of cockroach binary"
     roachprod stage "$1" release "$cockroach_binary"
@@ -217,7 +212,8 @@ function copy_result_with_retry() {
     result_files=$(find "$target_dir" -type f -name "*.txt")
     for result_file in $result_files
     do
-      if [[ $(tail -1 "$result_file" | awk '{if(int($3) > 87){print "pass"}}') != "pass" ]];
+      prev_line=$(tail -2 "$result_file")
+      if [[ "$prev_line" != *efc* ]] || [[ $(tail -1 "$result_file" | awk '{if(int($3) > 87){print "pass"}}') != "pass" ]];
       then
       	# Instead of deleting invalid result files, we rename them for auditing
       	# and validation purpose.
