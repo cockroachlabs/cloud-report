@@ -53,32 +53,39 @@ func init() {
 	// to finish a whole batch.
 	generateCmd.Flags().StringVarP(&lifetime, "lifetime", "l",
 		"6h", "cluster lifetime")
-	generateCmd.Flags().StringVar(&usage, "usage", "cloud-report-2022", "the usage label for roachprod create. Default: cloud-report-2022")
+	generateCmd.Flags().StringVarP(&usage, "usage", "u", "cloud-report-2022", "usage label")
 }
 
 type scriptData struct {
 	CloudDetails
-	Cluster          string
-	Lifetime         string
-	Usage            string
-	MachineType      string
-	ScriptsDir       string
-	EvaledArgs       string
-	UsEastAmi        string
-	UsWestAmi        string
-	NodeEastLocation string
-	NodeWestLocation string
-	BenchArgs        map[string]string
+	User                string
+	Cluster             string
+	Lifetime            string
+	Usage               string
+	MachineType         string
+	ScriptsDir          string
+	EvaledArgs          string
+	DefaultAmi          string
+	AlterAmis           map[string]string
+	DefaultNodeLocation string
+	AlterNodeLocations  map[string]string
+	BenchArgs           map[string]string
 }
 
 const driverTemplate = `#!/bin/bash
 
 CLOUD="{{.CloudDetails.Cloud}}"
 CLUSTER="$CRL_USERNAME-{{.Cluster}}"
-NODES=4
 TMUX_SESSION="cloud-report"
 WEST_CLUSTER="${CLUSTER}-west"
-WEST_CLUSTER_CREATED=
+west_cluster_created=''
+
+# If env var NODES is not specified, set NODES to 4.
+NODES=${NODES:=4}
+
+# We start different ports for testserver for the cross-region and intra-az network test.
+CROSS_REGION_PORT=12865
+INTER_AZ_PORT=1337
 
 set -ex
 scriptName=$(basename ${0%.*})
@@ -91,7 +98,7 @@ exec &> >(tee -a "$logdir/driver.log")
 # Create roachprod cluster
 function create_cluster() {
   roachprod create "$CLUSTER" -n $NODES --lifetime "{{.Lifetime}}" --clouds "$CLOUD" \
-    --$CLOUD-machine-type "{{.MachineType}}" {{.NodeEastLocation}} {{.EvaledArgs}} {{.UsEastAmi}} \
+    --$CLOUD-machine-type "{{.MachineType}}" {{.DefaultNodeLocation}} {{.EvaledArgs}} {{.DefaultAmi}} \
     --label {{.Usage}}
 
   roachprod run "$CLUSTER" -- tmux new -s "$TMUX_SESSION" -d
@@ -99,12 +106,12 @@ function create_cluster() {
 
 # Create roachprod in us-west2
 function create_west_cluster() {
-  roachprod create "$WEST_CLUSTER" -u $USER -n $NODES --lifetime "6h" --clouds "$CLOUD" \
-    --$CLOUD-machine-type "{{.MachineType}}" {{.NodeWestLocation}} {{.EvaledArgs}} {{.UsWestAmi}} \
+  roachprod create "$WEST_CLUSTER" -u $USER -n 1 --lifetime "{{.Lifetime}}" --clouds "$CLOUD" \
+    --$CLOUD-machine-type "{{.MachineType}}" {{.AlterNodeLocations.west}} {{.EvaledArgs}} {{.AlterAmis.west}} \
     --label {{.Usage}}
 
   roachprod run "$WEST_CLUSTER" -- tmux new -s "$TMUX_SESSION" -d
-  WEST_CLUSTER_CREATED=true
+  west_cluster_created=true
 }
 
 # Upload scripts to roachprod cluster
@@ -114,6 +121,8 @@ function upload_scripts() {
   echo "{{.MachineType}}" > "machinetype.txt"
   roachprod put "$1" "machinetype.txt" "machinetype.txt"
   roachprod run "$1" chmod -- -R +x ./scripts
+  roachprod put "$1" ./netperf ./netperf
+  roachprod run "$1" chmod -- -R +x ./netperf
 }
 
 # Load the cockroach binary to roachprod cluster
@@ -168,7 +177,6 @@ function run_under_tmux() {
   roachprod run $host -- tmux neww -t "$TMUX_SESSION" -n "$name" -d -- "$cmd"
 }
 
-#
 # Benchmark scripts should execute a single benchmark
 # and download results to the $logdir directory.
 # results_dir returns date suffixed directory under logdir.
@@ -258,23 +266,6 @@ function fetch_bench_iofsync_results() {
   roachprod get "$CLUSTER":1 ./fio-fsync-results $(results_dir "fio-fsync-results")
 }
 
-# Run Netperf benchmark
-function bench_net() {
-  if [ $NODES -lt 2 ]
-  then
-    echo "NODES must be greater than 1 for this test"
-    exit 1
-  fi
-
-  server=$(roachprod ip "$CLUSTER":$NODES)
-  port=1337
-  # Start server
-  roachprod run "$CLUSTER":$NODES ./scripts/gen/network-netperf.sh -- -S -p $port
-
-  # Start client
-  run_under_tmux "net" "$CLUSTER:$((NODES-1))" "./scripts/gen/network-netperf.sh -s $server -p $port $net_extra_args"
-}
-
 # Wait for Netperf benchmark to complete and fetch results.
 function fetch_bench_net_results() {
   if [ $NODES -lt 2 ]
@@ -325,30 +316,130 @@ function fetch_bench_tpcc_results() {
   copy_result_with_retry $node "tpcc-results"
 }
 
+# modify_remote_hosts_on_client_node is to get the ip from the remote node, 
+# write it into a local file, and mount it to the netperf/doc/examples folder 
+# in the client node.
+function modify_remote_hosts_on_client_node() {
+  # client_node is the one to run TCP_RR and TCP_STREAM.
+  local client_node=$1
+  local server_node=$2
+  # test_mode should be either cross-region or intra-az.
+  local test_mode=$3
+
+  local server_ip=$(roachprod ip "$server_node")
+  if [ -z $server_ip ]
+  then
+    echo "cannot get server_ip FOR server (remote) node ($server_node) in network test"
+    exit 1
+  fi
+  
+  # Since linux doesn't allow ":" in filename, we replace the ":" in 
+  # $server_node to "-".
+  formatted_server_node=$(echo "${server_node//:/-}")
+  echo "formatted_server_node=$formatted_server_node"
+  
+  # Save the ip address of the server node into the 
+  # netperf/doc/examples/remote_hosts in the client node.
+  local remote_host_file="${logdir}/${formatted_server_node}_${test_mode}_remote_hosts"
+  printf "REMOTE_HOSTS[0]=$server_ip\nREMOTE_HOSTS[1]=$server_ip\nNUM_REMOTE_HOSTS=2\n" >"$remote_host_file"
+  chmod 777 "$remote_host_file"
+  roachprod run "$client_node" -- sudo chmod 777 -R netperf
+  roachprod put "$client_node" "$remote_host_file" netperf/doc/examples/${test_mode}_remote_hosts
+}
+
+# get_best_number_streams is to run a netperf TCP_STREAM test with 
+# gradually incrementing the number of streams until the aggregate throughput 
+# converges (the latest 3 agg throughput's std < 0.3). The best number of 
+# streams will be saved in a file "num_streams" in the client node.
+function get_best_number_streams() {
+  local client_node=$1
+  local test_mode=$2
+  echo "running getting best num of stream for $client_node"
+
+  roachprod run "$client_node" -- "cd netperf/doc/examples && SEARCH_BEST_NUM_STREAMS=1 TEST_MODE=$test_mode ./runemomniaggdemo.sh"
+  echo "get best number of stream for $client_node"
+}
+
+# run_netperf_between_server_client is to get the best number of streams 
+# to run the throughput test between the server and client node, and run the
+# netperf latency and throughput test. We start the netserver on the server node
+# and run netperf command on the client node.
+# Note that in the cross-region case, we set the east node as the client node, 
+# and the west node as the server node. 
+function run_netperf_between_server_client() {
+  
+  local client_node=$1
+  local server_node=$2
+
+  local PORT=$3
+  local test_mode=$4
+  local netperf_extra_args=$5
+
+  local server_ip=$(roachprod ip $server_node)
+
+  roachprod run $client_node sudo ./scripts/gen/network-setup.sh
+  roachprod run $server_node sudo ./scripts/gen/network-setup.sh
+
+  # Start netserver on the server node.
+  # It may give error, but it only means that the netserver is already running
+  # on the given port, so we should proceed when that happens.
+  set +e
+  roachprod run $server_node ./scripts/gen/network-test.sh -- -S -p $PORT -m $server_node
+  set -e
+  
+  # Mount a file containing server's ip to the client node.
+  modify_remote_hosts_on_client_node $client_node $server_node $test_mode
+  get_best_number_streams $client_node $test_mode
+  run_under_tmux "${test_mode}-net" $client_node "./scripts/gen/network-test.sh -s $server_ip -p $PORT -m $test_mode -z $CLOUD-{{.MachineType}} $netperf_extra_args"
+}
+
+# Run intra-az Netperf benchmark. The test will be run the 1st and the 2nd
+# nodes of the same cluster.
+function bench_intra_az_net() {
+  if [ $NODES -lt 2 ]
+  then
+    echo "NODES must be greater than 1 for this test"
+    exit 1
+  fi
+
+  local server_node="$CLUSTER":2
+  local client_node="$CLUSTER":1
+
+  run_netperf_between_server_client $client_node $server_node $INTER_AZ_PORT intra-az "$net_extra_args"
+}
+
+# Wait for Netperf benchmark to complete and fetch results.
+function fetch_bench_intra_az_net_results() {
+  if [ $NODES -lt 2 ]
+  then
+    echo "NODES must be greater than 1 for this test"
+    exit 1
+  fi
+
+  roachprod run ${CLUSTER}:1 ./scripts/gen/network-test.sh -- -w -m intra-az
+  roachprod get ${CLUSTER}:1 ./intra-az-netperf-results $(results_dir "intra-az-netperf-results")
+}
+
+# bench_cross_region_net is run the cross-region network tests.
 function bench_cross_region_net() {
   create_west_cluster
   upload_scripts "$WEST_CLUSTER"
-  roachprod run ${WEST_CLUSTER}:1 "sudo apt-get update && sudo apt-get -y install netperf"
+  setup_cluster "$WEST_CLUSTER"
 
-  server_ip=$(roachprod ip ${CLUSTER}:1)
-  
-  port=1337
-  # Server
-  roachprod run ${CLUSTER}:1 ./scripts/gen/network-netperf.sh -- -S -p "$port"
-  # Cient
-  run_under_tmux "cross_region_net" ${WEST_CLUSTER}:1 "./scripts/gen/network-netperf.sh -s $server_ip -p $port $cross_region_net_extra_args"
+  run_netperf_between_server_client ${CLUSTER}:1 ${WEST_CLUSTER}:1 $CROSS_REGION_PORT cross-region $cross_region_net_extra_args
 }
 
+# fetch_bench_cross_region_net_results is to wait the cross-region network test
+# to finish and the fetch the results from the server node.
 function fetch_bench_cross_region_net_results() {
-  node=${WEST_CLUSTER}:1
-  roachprod run $node ./scripts/gen/network-netperf.sh -- -w
-  copy_result_with_retry $node "netperf-results"
+  roachprod run ${CLUSTER}:1 ./scripts/gen/network-test.sh -- -w -m cross-region
+  roachprod get ${CLUSTER}:1 ./cross-region-netperf-results $(results_dir "cross-region-netperf-results")
 }
 
 # Destroy roachprod cluster
 function destroy_cluster() {
   roachprod destroy "$CLUSTER"
-  if [[ -n $WEST_CLUSTER_CREATED ]]; then
+  if [[ -n $west_cluster_created ]]; then
     roachprod destroy "$WEST_CLUSTER"
   fi
 }
@@ -365,8 +456,8 @@ Usage: $0 [-b <bootstrap>]... [-w <workload>]... [-d] [-c cockroach_binary]
        -w cpu : Benchmark CPU
        -w io  : Benchmark IO
        -w iofsync : Benchmark IO Fsync
-       -w net : Benchmark Net
-       -w cr_net : Benchmark Cross-region Net
+       -w ia_net : Benchmark Net. Please don't run "ia_net" and "cr_net" on the same cluster.
+       -w cr_net : Benchmark Cross-region Net. Please don't run "ia_net" and "cr_net" on the same cluster.
        -w tpcc: Benchmark TPCC
        -w all : All of the above
    -c: Override cockroach binary to stage (local path to binary or release version)
@@ -392,8 +483,8 @@ do_destroy=''
 io_extra_args='{{with $arg := .BenchArgs.io}}{{$arg}}{{end}}'
 iofsync_extra_args='{{with $arg := .BenchArgs.iofsync}}{{$arg}}{{end}}'
 cpu_extra_args='{{with $arg := .BenchArgs.cpu}}{{$arg}}{{end}}'
-net_extra_args='{{with $arg := .BenchArgs.net}}{{$arg}}{{end}}'
 tpcc_extra_args='{{with $arg := .BenchArgs.tpcc}}{{$arg}}{{end}}'
+intra_az_net_extra_args='{{with $arg := .BenchArgs.net}}{{$arg}}{{end}}'
 cross_region_net_extra_args='{{with $arg := .BenchArgs.cross_region_net}}{{$arg}}{{end}}'
 cockroach_binary=''
 
@@ -417,10 +508,10 @@ while getopts 'c:b:w:dn:I:F:N:C:T:R:r' flag; do
          cpu) benchmarks+=("bench_cpu") ;;
          io) benchmarks+=("bench_io") ;;
          iofsync) benchmarks+=("bench_iofsync") ;;
-         net) benchmarks+=("bench_net") ;;
+         ia_net) benchmarks+=("bench_intra_az_net") ;;
          cr_net) benchmarks+=("bench_cross_region_net") ;;
          tpcc) benchmarks+=("bench_tpcc") ;;
-         all) benchmarks+=("bench_cpu" "bench_io" "bench_io_fsync" "bench_net" "bench_tpcc" "bench_cross_region_net") ;;
+         all) benchmarks+=("bench_cpu" "bench_io" "bench_io_fsync" "bench_tpcc" "bench_cross_region_net") ;;
          *) usage "Invalid -w value '${OPTARG}'";;
        esac
     ;;
@@ -430,8 +521,8 @@ while getopts 'c:b:w:dn:I:F:N:C:T:R:r' flag; do
     I) io_extra_args="${OPTARG}" ;;
     F) iofsync_extra_args="${OPTARG}" ;;
     C) cpu_extra_args="${OPTARG}" ;;
-    N) net_extra_args="${OPTARG}" ;;
     T) tpcc_extra_args="${OPTARG}" ;;
+    N) intra_az_net_extra_args="${OPTARG}" ;;
     R) cross_region_net_extra_args="${OPTARG}" ;;
     *) usage ;;
   esac
@@ -523,20 +614,20 @@ func generateCloudScripts(cloud CloudDetails) error {
 
 	scriptTemplate := template.Must(template.New("script").Parse(driverTemplate))
 	for machineType, machineConfig := range cloud.MachineTypes {
-		clusterName := fmt.Sprintf("cldrprt%d-%s-%d",
-			(1+time.Now().Year())%1000, machineType,
-			hashStrings(cloud.Cloud, cloud.Group, reportVersion))
+		clusterName := fmt.Sprintf("cr%d-%s-%s", (1+time.Now().Year())%1000, machineType, cloud.Group)
 		validClusterName := regexp.MustCompile(`[\.|\_]`)
 		clusterName = validClusterName.ReplaceAllString(clusterName, "-")
 
 		templateArgs := scriptData{
-			CloudDetails: cloud,
-			Cluster:      clusterName,
-			Lifetime:     lifetime,
-			Usage:        fmt.Sprintf("usage=%s", usage),
-			MachineType:  machineType,
-			ScriptsDir:   scriptsDir,
-			BenchArgs:    combineArgs(machineConfig.BenchArgs, cloud.BenchArgs),
+			CloudDetails:       cloud,
+			Cluster:            clusterName,
+			Lifetime:           lifetime,
+			Usage:              fmt.Sprintf("usage=%s", usage),
+			MachineType:        machineType,
+			ScriptsDir:         scriptsDir,
+			BenchArgs:          combineArgs(machineConfig.BenchArgs, cloud.BenchArgs),
+			AlterNodeLocations: make(map[string]string),
+			AlterAmis:          make(map[string]string),
 		}
 
 		// Evaluate roachprodArgs: those maybe templatized.
@@ -552,24 +643,27 @@ func generateCloudScripts(cloud CloudDetails) error {
 				buf.WriteByte(' ')
 			}
 			switch arg {
-			case "gce-zones", "aws-zones", "azure-locations":
+			case "gce-zones", "aws-zones", "azure-locations", "azure-availability-zone":
 				if !(len(val) > 0) {
 					return fmt.Errorf("zone config for %s is no specified", arg)
 				}
-				templateArgs.NodeEastLocation = fmt.Sprintf("--%s=%q", arg, val)
-			case "west-gce-zones", "west-aws-zones", "west-azure-locations":
-				if !(len(val) > 0) {
-					return fmt.Errorf("zone config for %s is no specified", arg)
-				}
-				templateArgs.NodeWestLocation = fmt.Sprintf("--%s=%q", arg[5:], val)
+				templateArgs.DefaultNodeLocation += fmt.Sprintf("--%s=%q ", arg, val)
 			case "aws-image-ami", "gce-image":
-				templateArgs.UsEastAmi = fmt.Sprintf("--%s=%q", arg, val)
-			case "west-aws-image-ami", "west-gce-image":
-				templateArgs.UsWestAmi = fmt.Sprintf("--%s=%q", arg[5:], val)
+				templateArgs.DefaultAmi = fmt.Sprintf("--%s=%q", arg, val)
 			default:
-				fmt.Fprintf(buf, "--%s", arg)
-				if len(val) > 0 {
-					fmt.Fprintf(buf, "=%q", val)
+				if region, label := analyzeAlterZone(arg); label != "" {
+					templateArgs.AlterNodeLocations[region] += fmt.Sprintf("--%s=%q ", label, val)
+				} else if region, label := analyzeAlterImage(arg); label != "" {
+					if val != "" {
+						templateArgs.AlterAmis[region] = fmt.Sprintf("--%s=%q", label, val)
+					} else {
+						templateArgs.AlterAmis[region] = ""
+					}
+				} else {
+					fmt.Fprintf(buf, "--%s", arg)
+					if len(val) > 0 {
+						fmt.Fprintf(buf, "=%q", val)
+					}
 				}
 			}
 		}
@@ -589,4 +683,33 @@ func generateCloudScripts(cloud CloudDetails) error {
 	}
 
 	return nil
+}
+
+// analyzeAlterZone is to parse argument that may contain zone location information for an alternative region.
+func analyzeAlterZone(arg string) (string, string) {
+	gceZoneRegex := regexp.MustCompile(`^(.+)-(gce-zones)$`)
+	awsZoneRegex := regexp.MustCompile(`^(.+)-(aws-zones)$`)
+	azureLocationRegex := regexp.MustCompile(`^(.+)-(azure-locations)$`)
+	azureAzRegex := regexp.MustCompile(`^(.+)-(azure-availability-zone)$`)
+	zoneRegex := []*regexp.Regexp{gceZoneRegex, awsZoneRegex, azureLocationRegex, azureAzRegex}
+	for _, regex := range zoneRegex {
+		if regex.MatchString(arg) {
+			return regex.FindStringSubmatch(arg)[1], regex.FindStringSubmatch(arg)[2]
+		}
+	}
+	return "", ""
+}
+
+// analyzeAlterImage is to parse argument that may contain image information for an alternative region.
+func analyzeAlterImage(arg string) (string, string) {
+	azureImageRegex := regexp.MustCompile(`^(.+)-(azure-image-ami)$`)
+	awsImageRegex := regexp.MustCompile(`^(.+)-(aws-image-ami)$`)
+	gceImageRegex := regexp.MustCompile(`^(.+)-(gce-image)$`)
+	ImageRegex := []*regexp.Regexp{azureImageRegex, awsImageRegex, gceImageRegex}
+	for _, regex := range ImageRegex {
+		if regex.MatchString(arg) {
+			return regex.FindStringSubmatch(arg)[1], regex.FindStringSubmatch(arg)[2]
+		}
+	}
+	return "", ""
 }
