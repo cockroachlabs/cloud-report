@@ -45,12 +45,12 @@
                     "gce-pd-volume-size": "1000"
                 },
                 "benchArgs": {
-                    "tpcc": "-A 1000 -W 1200 -I 100 -d 10m"
+                    "tpcc": "-A 400 -W 900 -I 50 -d 30m"
                 }
             },
             "c2-standard-30": {
                 "benchArgs": {
-                    "tpcc": "-A 1000 -W 1200 -I 100 -d 10m"
+                    "tpcc": "-A 600 -W 1000 -I 50 -d 30m"
                 }
             },
 
@@ -134,12 +134,12 @@
                     "gce-pd-volume-size": "1000"
                 },
                 "benchArgs": {
-                    "tpcc": "-A 1000 -W 1200 -I 100 -d 10m"
+                    "tpcc": "-A 400 -W 900 -I 50 -d 30m"
                 }
             },
             "c2-standard-30": {
                 "benchArgs": {
-                    "tpcc": "-A 1000 -W 1200 -I 100 -d 10m"
+                    "tpcc": "-A 400 -W 900 -I 50 -d 30m"
                 }
             },
             "n2-highmem-8": {
