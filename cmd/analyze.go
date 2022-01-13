@@ -23,6 +23,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cockroachdb/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -556,7 +557,7 @@ func parseNetperfThroughput(p string, res *networkResult) error {
 
 	res.throughput, err = strconv.ParseFloat(pieces[0], 64)
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "error parsing %q in %s", pieces[0], p)
 	}
 	res.throughputUnits = pieces[1]
 	// trim the new line
@@ -578,32 +579,32 @@ func parseNetperfLatency(p string, res *networkResult) error {
 
 	res.minLat, err = strconv.ParseFloat(pieces[0], 64)
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "error parsing %q in %s", pieces[0], p)
 	}
 	res.meanLat, err = strconv.ParseFloat(pieces[1], 64)
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "error parsing %q in %s", pieces[1], p)
 	}
 	res.p90Lat, err = strconv.ParseFloat(pieces[2], 64)
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "error parsing %q in %s", pieces[2], p)
 	}
 	res.p99Lat, err = strconv.ParseFloat(pieces[3], 64)
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "error parsing %q in %s", pieces[3], p)
 	}
 	res.maxLat, err = strconv.ParseFloat(pieces[4], 64)
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "error parsing %q in %s", pieces[4], p)
 	}
 	res.latStdDev, err = strconv.ParseFloat(pieces[5], 64)
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "error parsing %q in %s", pieces[5], p)
 	}
 	// Last entry has an extra new line
 	res.txnRate, err = strconv.ParseFloat(pieces[6][:len(pieces[6])-1], 64)
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "error parsing %q in %s", pieces[6], p)
 	}
 	return nil
 }
@@ -693,42 +694,42 @@ func parseTPCCRun(p string) (*tpccRun, error) {
 	pieces := strings.Fields(string(out))
 
 	if len(pieces) != 9 {
-		return nil, fmt.Errorf("unexpected number of fields found. expected 7, found: %d", len(pieces))
+		return nil, fmt.Errorf("unexpected number of fields found. expected 7, found: %d: %s", len(pieces), out)
 	}
 
 	run.tpmC, err = strconv.ParseFloat(pieces[1], 64)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "error parsing %q in %s", pieces[1], p)
 	}
 	// Strip '%'
 	run.efc, err = strconv.ParseFloat(pieces[2][:len(pieces[2])-1], 64)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "error parsing %q in %s", pieces[2], p)
 	}
 	run.avg, err = strconv.ParseFloat(pieces[3], 64)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "error parsing %q in %s", pieces[3], p)
 	}
 	run.p50, err = strconv.ParseFloat(pieces[4], 64)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "error parsing %q in %s", pieces[4], p)
 	}
 	run.p90, err = strconv.ParseFloat(pieces[5], 64)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "error parsing %q in %s", pieces[5], p)
 	}
 	run.p95, err = strconv.ParseFloat(pieces[6], 64)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "error parsing %q in %s", pieces[6], p)
 	}
 	run.p99, err = strconv.ParseFloat(pieces[7], 64)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "error parsing %q in %s", pieces[7], p)
 	}
 	// Last entry has an extra new line
 	run.pMax, err = strconv.ParseFloat(pieces[8][:len(pieces[8])-1], 64)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "error parsing %q in %s", pieces[8], p)
 	}
 	return run, nil
 }
@@ -752,7 +753,7 @@ func (t *tpccAnalyzer) analyzeTPCC(cloud CloudDetails, machineType string) error
 			log.Printf("Skipping TPC-C throughput log %q (already analyzed newer", r)
 			continue
 		}
-		resultsFiles, err := filepath.Glob(path.Join(filepath.Dir(r), "tpcc-result*"))
+		resultsFiles, err := filepath.Glob(path.Join(filepath.Dir(r), "tpcc-result*.txt"))
 		if err != nil {
 			return err
 		}
