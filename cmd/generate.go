@@ -93,6 +93,7 @@ function create_cluster() {
   roachprod create "$CLUSTER" -n $NODES --lifetime "{{.Lifetime}}" --clouds "$CLOUD" \
     --$CLOUD-machine-type "{{.MachineType}}" {{.NodeEastLocation}} {{.EvaledArgs}} {{.UsEastAmi}} \
     --label {{.Usage}}
+
   roachprod run "$CLUSTER" -- tmux new -s "$TMUX_SESSION" -d
 }
 
@@ -101,6 +102,7 @@ function create_west_cluster() {
   roachprod create "$WEST_CLUSTER" -u $USER -n $NODES --lifetime "6h" --clouds "$CLOUD" \
     --$CLOUD-machine-type "{{.MachineType}}" {{.NodeWestLocation}} {{.EvaledArgs}} {{.UsWestAmi}} \
     --label {{.Usage}}
+
   roachprod run "$WEST_CLUSTER" -- tmux new -s "$TMUX_SESSION" -d
   WEST_CLUSTER_CREATED=true
 }
@@ -119,8 +121,14 @@ function load_cockroach() {
   roachprod run "$1" "rm -f ./cockroach"
   if [ -z "$cockroach_binary" ]
   then
-    roachprod stage "$1" cockroach
+    cockroach_version=$(curl -s -i https://edge-binaries.cockroachdb.com/cockroach/cockroach.linux-gnu-amd64.LATEST |grep location|awk -F"/" '{print $NF}')
+    echo "WARN: staging a stable cockroach binary from master with hash: 5ac733bb4927020bc1c52da24b2591742fde8e1f"
+    roachprod stage "$1" cockroach 5ac733bb4927020bc1c52da24b2591742fde8e1f
+  elif [[ $cockroach_binary =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    echo "INFO: staging release version $cockroach_binary of cockroach binary"
+    roachprod stage "$1" release "$cockroach_binary"
   else
+    echo "WARN: staging unknown version of cockroach binary from local path: $cockroach_binary"
     roachprod put "$1" "$cockroach_binary" "cockroach"
   fi
 }
@@ -148,6 +156,8 @@ function start_cockroach() {
 # Execute setup.sh script on the cluster to configure it
 function setup_cluster() {
 	roachprod run "$1" sudo ./scripts/gen/setup.sh "$CLOUD"
+	roachprod run "$1":1 -- cpufetch -s legacy|awk -F"@" '{print $NF}'|tr -d ' '|awk NF > "$logdir"/"$1"_cpu_info.txt
+    roachprod run "$1":1 -- lscpu |grep "MHz" >> "$logdir"/"$1"_cpu_info.txt
 }
 
 # executes command on a host using roachprod, under tmux session.
@@ -182,8 +192,8 @@ function copy_result_with_retry() {
   do
     roachprod get "$1" "./$2" "$target_dir"
 
-    result=$(find "$target_dir" -empty -type f -name "*.log")
-    if [ -z "$result" ]
+    result_files=$(find "$target_dir" -empty -type f -name "*.log")
+    if [ -z "$result_files" ]
     then
       echo "Test passed!"
       break
@@ -192,9 +202,24 @@ function copy_result_with_retry() {
     sleep 5s
   done
 
-  if [ ! -z "$result" ]
+  if [ ! -z "$result_files" ]
   then
     echo "Copy failed with empty result file(s) in "$target_dir", test failed!"
+  fi
+
+  if [ "$2" == "tpcc-results" ]
+  then
+    result_files=$(find "$target_dir" -type f -name "*.txt")
+    for result_file in $result_files
+    do
+      prev_line=$(tail -2 "$result_file")
+      if [[ "$prev_line" != *efc* ]] || [[ $(tail -1 "$result_file" | awk '{if(int($3) > 87){print "pass"}}') != "pass" ]];
+      then
+      	# Instead of deleting invalid result files, we rename them for auditing
+      	# and validation purpose.
+        mv $result_file "$result_file.bak"
+      fi
+    done
   fi
 }
 
@@ -332,7 +357,7 @@ Usage: $0 [-b <bootstrap>]... [-w <workload>]... [-d] [-c cockroach_binary]
        -w cr_net : Benchmark Cross-region Net
        -w tpcc: Benchmark TPCC
        -w all : All of the above
-   -c: Override cockroach binary to use.
+   -c: Override cockroach binary to stage (local path to binary or release version)
    -r: Do not start benchmarks specified by -w.  Instead, resume waiting for their completion.
    -I: additional IO benchmark arguments
    -N: additional network benchmark arguments
