@@ -19,6 +19,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -434,71 +435,128 @@ func (c *coremarkAnalyzer) Close() (err error) {
 	return nil
 }
 
-const netCSVHeader = "Cloud,Date,MachineType,Throughput,ThroughputUnits,minLat," +
-	"meanLat,p90Lat,p99Lat,maxLat,latStdDev,txnRate"
+const netCSVHeader = "testMode,Cloud,DateTime(Zulu),MachineType,DiskType,ClientRegion,ServerRegion," +
+	"MinThrpt,MeanThrpt,MaxThrpt,ThrptUnit,ExpectedThrpt,#Streams," +
+	"RecvBufferSize(bytes),SendBufferSize(bytes),ThrptTestDuration(seconds),LatTestDuration(seconds)," +
+	"minLat(microseconds),meanLat(microseconds),p90Lat(microseconds),p99Lat(microseconds),maxLat(microseconds)," +
+	"LastStdDev,TxnRate,ThrptTimeSeriesPlotPath"
 
 type networkResult struct {
-	throughput      float64
-	throughputUnits string
-	minLat          float64
-	meanLat         float64
-	p90Lat          float64
-	p99Lat          float64
-	maxLat          float64
-	latStdDev       float64
-	txnRate         float64
-	modtime         time.Time
+	// testMode can be either "cross-region" or "intra-az".
+	testMode     string
+	diskType     string
+	machineType  string
+	clientRegion string
+	serverRegion string
+
+	// Latency results.
+	latTestDuration   string
+	minLatencyMicros  string
+	meanLatencyMicros string
+	latencyMicros_90  string
+	latencyMicros_99  string
+	maxLatencyMicros  string
+	latStdDevMicrosec string
+	txnRate           string
+
+	// Throughput results.
+	expectedThroughput string
+	numStreams         string
+	throughputDuration string
+	throughtputRes     string
+	throughputUnit     string
+	minThroughput      string
+	maxThroughput      string
+	meanThroughput     string
+	dateTime           string
+	recvBufferSize     string
+	sendBufferSize     string
+	timeSeriesPlotPath string
+
+	modtime time.Time
 }
 
 type netAnalyzer struct {
 	machineResults map[string]*networkResult
 	cloud          string
+	testMode       string
 }
 
-func newNetAnalyzer(cloud string) resultsAnalyzer {
+func newIntraAzNetAnalyzer(cloud string) resultsAnalyzer {
 	return &netAnalyzer{
 		cloud:          cloud,
 		machineResults: make(map[string]*networkResult),
+		testMode:       "intra-az",
+	}
+}
+
+func newCrossRegionNetAnalyzer(cloud string) resultsAnalyzer {
+	return &netAnalyzer{
+		cloud:          cloud,
+		machineResults: make(map[string]*networkResult),
+		testMode:       "cross-region",
 	}
 }
 
 func (n *netAnalyzer) Close() (err error) {
-	f, err := os.OpenFile(ResultsFile("net.csv", n.cloud), os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
+	fileName := fmt.Sprintf("%s-net.csv", n.testMode)
+	f, err := os.OpenFile(ResultsFile(fileName, n.cloud), os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
 		return err
 	}
 	defer func() { err = f.Close() }()
 
-	fmt.Fprintf(f, "%s\n", netCSVHeader)
+	if _, err := fmt.Fprintf(f, "%s\n", netCSVHeader); err != nil {
+		return fmt.Errorf("cannot write network header to csv: %v", err)
+	}
+
 	for machineType, res := range n.machineResults {
 		fields := []string{
+			res.testMode,
 			n.cloud,
-			res.modtime.String(),
+			res.dateTime,
 			machineType,
-			fmt.Sprintf("%f", res.throughput),
-			res.throughputUnits,
-			fmt.Sprintf("%f", res.minLat),
-			fmt.Sprintf("%f", res.meanLat),
-			fmt.Sprintf("%f", res.p90Lat),
-			fmt.Sprintf("%f", res.p99Lat),
-			fmt.Sprintf("%f", res.maxLat),
-			fmt.Sprintf("%f", res.latStdDev),
-			fmt.Sprintf("%f", res.txnRate),
+			res.diskType,
+			res.clientRegion,
+			res.serverRegion,
+			res.minThroughput,
+			res.meanThroughput,
+			res.maxThroughput,
+			res.throughputUnit,
+			res.expectedThroughput,
+			res.numStreams,
+			res.recvBufferSize,
+			res.sendBufferSize,
+			res.throughputDuration,
+			res.latTestDuration,
+			res.minLatencyMicros,
+			res.meanLatencyMicros,
+			res.latencyMicros_90,
+			res.latencyMicros_99,
+			res.maxLatencyMicros,
+			res.latStdDevMicrosec,
+			res.txnRate,
+			res.timeSeriesPlotPath,
 		}
-		fmt.Fprintf(f, "%s\n", strings.Join(fields, ","))
+		if _, err := fmt.Fprintf(f, "%s\n", strings.Join(fields, ",")); err != nil {
+			return fmt.Errorf("cannot output fields to the csv \"%s\": %v",
+				fileName,
+				err,
+			)
+		}
 	}
 	return nil
 }
 
 func (n *netAnalyzer) analyzeNetwork(cloud CloudDetails, machineType string) error {
-	glob := path.Join(cloud.LogDir(), FormatMachineType(machineType), "netperf-results.*/success")
+	// The file to parse is saved at report-data/20220109/aws/ebs-gp3/logs/c5-2xlarge/cross-region-netperf-results.20220110.07:33:17/cross-region-netperf-results.log
+	logFileName := fmt.Sprintf("%s-netperf-results.*/%s-netperf-results.log", n.testMode, n.testMode)
+	glob := path.Join(cloud.LogDir(), FormatMachineType(machineType), logFileName)
 	goodRuns, err := filepath.Glob(glob)
 	if err != nil {
 		return err
 	}
-
 	for _, r := range goodRuns {
-		// Read the netperf-results
 		log.Printf("Analyzing %s", r)
 		info, err := os.Stat(r)
 		if err != nil {
@@ -508,7 +566,7 @@ func (n *netAnalyzer) analyzeNetwork(cloud CloudDetails, machineType string) err
 			log.Printf("Skipping network throughput log %q (already analyzed newer", r)
 			continue
 		}
-		runs, err := filepath.Glob(path.Join(filepath.Dir(r), "netperf-result*"))
+		runs, err := filepath.Glob(path.Join(filepath.Dir(r), "*-netperf-result*"))
 		if err != nil {
 			return err
 		}
@@ -519,15 +577,10 @@ func (n *netAnalyzer) analyzeNetwork(cloud CloudDetails, machineType string) err
 		res := &networkResult{
 			modtime: info.ModTime(),
 		}
-		err = parseNetperfThroughput(run, res)
+		err = parseNetperfLog(run, res, n.cloud)
 		if err != nil {
 			return err
 		}
-		err = parseNetperfLatency(run, res)
-		if err != nil {
-			return err
-		}
-		// Do the same for latency below
 		n.machineResults[machineType] = res
 	}
 	return nil
@@ -544,67 +597,114 @@ func (n *netAnalyzer) Analyze(cloud CloudDetails) error {
 	})
 }
 
-func parseNetperfThroughput(p string, res *networkResult) error {
-	// First, extract the last line of the netperf log output and emit the
-	// throughput and the unit, which are the 4th and 5th entry.
-	cmd := exec.Command("sh", "-c",
-		fmt.Sprintf("tail -1 %s | tr -s ' ' | cut -d ' ' -f4,5", p))
-	out, err := cmd.Output()
-	pieces := strings.Split(string(out), " ")
-	if len(pieces) != 2 {
-		return fmt.Errorf("unexpected number of fields found. expected 2, found: %d", len(pieces))
+func parseNetperfThroughput(filePath string, content string, res *networkResult) error {
+	throughputRegex := `NUMBER_OF_STREAM=(.+)[\s]+DURATION=(.+)[\S\s]+Minimum throughput:\s(.+)[\s]+Average throughput:\s(.+)[\s]+Maximum throughput:\s(.+)[\s]+`
+	tMatches := regexp.MustCompile(throughputRegex).FindStringSubmatch(content)
+	if len(tMatches) < 6 {
+		return fmt.Errorf("%s: can't find target line to get throughput, %s", filePath, tMatches)
+	}
+	throughputRes := tMatches[1:]
+	if len(throughputRes) < 5 {
+		return fmt.Errorf("%s: length of throughput result is less than 5", filePath)
 	}
 
-	res.throughput, err = strconv.ParseFloat(pieces[0], 64)
-	if err != nil {
-		return errors.Wrapf(err, "error parsing %q in %s", pieces[0], p)
-	}
-	res.throughputUnits = pieces[1]
-	// trim the new line
-	res.throughputUnits = res.throughputUnits[:len(res.throughputUnits)-1]
+	res.numStreams = throughputRes[0]
+	res.throughputDuration = throughputRes[1]
+	res.throughputUnit = strings.Split(throughputRes[2], " ")[1]
+	res.minThroughput = strings.Split(throughputRes[2], " ")[0]
+	res.meanThroughput = strings.Split(throughputRes[3], " ")[0]
+	res.maxThroughput = strings.Split(throughputRes[4], " ")[0]
+
 	return nil
 }
 
-func parseNetperfLatency(p string, res *networkResult) error {
-	// First, extract the last line of the netperf log output and emit the
-	// throughput and the unit, which are the 4th and 5th entry.
-	cmd := exec.Command("sh", "-c",
-		fmt.Sprintf(" tail -7 %s | head -n 1 | tr -s ' ' | cut -d ' ' -f1-7", p))
-	out, err := cmd.Output()
-	pieces := strings.Split(string(out), " ")
-
-	if len(pieces) != 7 {
-		return fmt.Errorf("unexpected number of fields found. expected 7, found: %d", len(pieces))
+func parseNetperfLatency(filePath string, content string, res *networkResult) error {
+	latencyRegex := `(.+)\s\*{10} start multistream_netperf.sh`
+	lMatches := regexp.MustCompile(latencyRegex).FindStringSubmatch(content)
+	if len(lMatches) < 2 {
+		return fmt.Errorf("%s: can't find target line to get latency, %s", filePath, lMatches)
+	}
+	latencyRes := strings.Fields(lMatches[1])
+	if len(latencyRes) < 7 {
+		return fmt.Errorf("%s: length for the latency result is less than 7", filePath)
 	}
 
-	res.minLat, err = strconv.ParseFloat(pieces[0], 64)
-	if err != nil {
-		return errors.Wrapf(err, "error parsing %q in %s", pieces[0], p)
+	res.minLatencyMicros = latencyRes[0]
+	res.meanLatencyMicros = latencyRes[1]
+	res.latencyMicros_90 = latencyRes[2]
+	res.latencyMicros_99 = latencyRes[3]
+	res.maxLatencyMicros = latencyRes[4]
+	res.latStdDevMicrosec = latencyRes[5]
+	res.txnRate = latencyRes[6]
+	res.latTestDuration = "60"
+
+	return nil
+}
+
+// parseStartTimeFromLog is to get the starting timestamp of the network test.
+func parseStartTimeFromLog(filePath string, content string, res *networkResult) error {
+	timeRegex := `start multistream_netperf.sh (.+)\*{12}`
+	timeR := regexp.MustCompile(timeRegex)
+	timeMatches := timeR.FindStringSubmatch(content)
+	if len(timeMatches) < 2 {
+		return fmt.Errorf("%s: can't find target line to get the time, %s", filePath, timeMatches)
 	}
-	res.meanLat, err = strconv.ParseFloat(pieces[1], 64)
-	if err != nil {
-		return errors.Wrapf(err, "error parsing %q in %s", pieces[1], p)
+	timeRes := timeMatches[1:]
+	res.dateTime = timeRes[0]
+
+	return nil
+}
+
+func parseNetperfLog(filePath string, res *networkResult, cloud string) error {
+	baseDir := filepath.Dir(filePath)
+	baseDirName := filepath.Base(baseDir)
+	// testMode is either "cross-region" or "intra-az".
+	testMode := strings.Join(strings.Split(baseDirName, "-")[:2], "-")
+	res.testMode = testMode
+	svgPath := filepath.Join(baseDir, "netperf_draw_plot_overall.svg")
+
+	if _, err := os.Stat(svgPath); os.IsNotExist(err) {
+		return fmt.Errorf("svg path for the time series \"%s\" doesn't exists", svgPath)
 	}
-	res.p90Lat, err = strconv.ParseFloat(pieces[2], 64)
-	if err != nil {
-		return errors.Wrapf(err, "error parsing %q in %s", pieces[2], p)
+
+	res.timeSeriesPlotPath = filepath.Join(strings.Split(svgPath, "/")[2:]...)
+	splitFilePath := strings.Split(filePath, "/")
+
+	res.diskType = splitFilePath[3]
+	res.machineType = splitFilePath[5]
+	// The "unknown" string at the "expectedThroughput" column is a placeholder,
+	// should be manually replaced in the csv with the true expected throughput.
+	res.expectedThroughput = "unknown"
+
+	switch cloud {
+	case "azure":
+		res.clientRegion = "eastus"
+		res.serverRegion = "westus2"
+	case "aws":
+		res.clientRegion = "us-east-1"
+		res.serverRegion = "us-west-2"
+	case "gce":
+		res.clientRegion = "us-east4"
+		res.serverRegion = "us-west1"
 	}
-	res.p99Lat, err = strconv.ParseFloat(pieces[3], 64)
+
+	res.recvBufferSize = "32000000"
+	res.sendBufferSize = "32000000"
+
+	b, err := ioutil.ReadFile(filePath)
 	if err != nil {
-		return errors.Wrapf(err, "error parsing %q in %s", pieces[3], p)
+		return fmt.Errorf("cannot open %s in parseNetperfLog", filePath)
 	}
-	res.maxLat, err = strconv.ParseFloat(pieces[4], 64)
-	if err != nil {
-		return errors.Wrapf(err, "error parsing %q in %s", pieces[4], p)
+
+	content := string(b)
+	if err := parseNetperfLatency(filePath, content, res); err != nil {
+		return err
 	}
-	res.latStdDev, err = strconv.ParseFloat(pieces[5], 64)
-	if err != nil {
-		return errors.Wrapf(err, "error parsing %q in %s", pieces[5], p)
+	if err := parseNetperfThroughput(filePath, content, res); err != nil {
+		return err
 	}
-	// Last entry has an extra new line
-	res.txnRate, err = strconv.ParseFloat(pieces[6][:len(pieces[6])-1], 64)
-	if err != nil {
-		return errors.Wrapf(err, "error parsing %q in %s", pieces[6], p)
+	if err := parseStartTimeFromLog(filePath, content, res); err != nil {
+		return err
 	}
 	return nil
 }
@@ -792,8 +892,11 @@ func analyzeResults() error {
 	cpu := newPerCloudAnalyzer(newCoremarkAnalyzer)
 	defer cpu.Close()
 
-	net := newPerCloudAnalyzer(newNetAnalyzer)
-	defer net.Close()
+	intraAzNet := newPerCloudAnalyzer(newIntraAzNetAnalyzer)
+	defer intraAzNet.Close()
+
+	crossRegionNet := newPerCloudAnalyzer(newCrossRegionNetAnalyzer)
+	defer crossRegionNet.Close()
 
 	fio := newPerCloudAnalyzer(newFioAnalyzer)
 	defer fio.Close()
@@ -806,8 +909,11 @@ func analyzeResults() error {
 		if err := cpu.Analyze(cloudDetail); err != nil {
 			return err
 		}
-		if err := net.Analyze(cloudDetail); err != nil {
-			return err
+		if err := intraAzNet.Analyze(cloudDetail); err != nil {
+			return fmt.Errorf("intra-az net: %v", err)
+		}
+		if err := crossRegionNet.Analyze(cloudDetail); err != nil {
+			return fmt.Errorf("cross-region net: %v", err)
 		}
 		if err := fio.Analyze(cloudDetail); err != nil {
 			return err
