@@ -614,7 +614,9 @@ func generateCloudScripts(cloud CloudDetails) error {
 
 	scriptTemplate := template.Must(template.New("script").Parse(driverTemplate))
 	for machineType, machineConfig := range cloud.MachineTypes {
-		clusterName := fmt.Sprintf("cr%d-%s-%s", (1+time.Now().Year())%1000, machineType, cloud.Group)
+		clusterName := fmt.Sprintf("cldrprt%d-%s-%d",
+			(1+time.Now().Year())%1000, machineType,
+			hashStrings(cloud.Cloud, cloud.Group, reportVersion))
 		validClusterName := regexp.MustCompile(`[\.|\_]`)
 		clusterName = validClusterName.ReplaceAllString(clusterName, "-")
 
