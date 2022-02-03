@@ -23,6 +23,8 @@ chmod +x runemomniaggdemo.sh find_max_burst.sh
 
 sudo sysctl -w net.ipv4.tcp_rmem="4096        131072  32000000"
 sudo sysctl -w net.ipv4.tcp_wmem="4096        16384   32000000"
+sudo sysctl -w net.core.rmem_max=32000000
+sudo sysctl -w net.core.wmem_max=32000000
 
 f_port=12865
 sudo lsof -i :$f_port >/dev/null || sudo netserver -p $f_port

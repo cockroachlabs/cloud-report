@@ -106,8 +106,10 @@
       "azure-locations": "eastus",
       "west-azure-locations": "westus2",
       "azure-availability-zone": "2",
+      "west-azure-availability-zone": "1",
       "azure-volume-size": "2500",
-      "azure-disk-caching": "read-only"
+      "azure-disk-caching": "read-only",
+      "west-azure-image-ami": ""
     }
   },
   {
@@ -217,8 +219,10 @@
       "azure-locations": "eastus",
       "west-azure-locations": "westus2",
       "azure-availability-zone": "2",
+      "west-azure-availability-zone": "1",
       "azure-volume-size": "2500",
-      "azure-ultra-disk-iops": "16000"
+      "azure-ultra-disk-iops": "16000",
+      "west-azure-image-ami": ""
     }
   }
 ]
