@@ -79,6 +79,9 @@
       "west-aws-image-ami": "ami-0964546d3da97e3ab",
       "local-ssd": "false",
       "aws-enable-multiple-stores": null
+    },
+    "benchArgs": {
+      "tpcc": " -L \" --provider-override=s3 --bucket-override=cloud-report-tpcc --auth-params-override=\\\"AUTH=implicit&AWS_REGION=us-east-1\\\"\" "
     }
   },
   {
@@ -162,6 +165,9 @@
       "local-ssd": "false",
       "aws-ebs-iops": "16000",
       "aws-enable-multiple-stores": null
+    },
+    "benchArgs": {
+      "tpcc": " -L \" --provider-override=s3 --bucket-override=cloud-report-tpcc --auth-params-override=\"AUTH=implicit&AWS_REGION=us-east-1\" \" "
     }
   }
 ]
