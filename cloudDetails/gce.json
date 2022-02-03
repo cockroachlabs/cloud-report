@@ -43,16 +43,9 @@
             "c2-standard-8": {
                 "roachprodArgs": {
                     "gce-pd-volume-size": "1000"
-                },
-                "benchArgs": {
-                    "tpcc": "-A 400 -W 900 -I 50 -d 30m"
                 }
             },
-            "c2-standard-30": {
-                "benchArgs": {
-                    "tpcc": "-A 600 -W 1000 -I 50 -d 30m"
-                }
-            },
+            "c2-standard-30": null,
 
             "n2-highmem-8": {
                 "roachprodArgs": {
@@ -89,6 +82,9 @@
             "gce-pd-volume-type": "pd-ssd",
             "gce-pd-volume-size": "2500",
             "gce-min-cpu-platform": "Intel Cascade Lake"
+        },
+        "benchArgs": {
+            "tpcc": " -L \"--provider-override=gs --bucket-override=cloud-report-tpcc\" "
         }
     },
     {
@@ -132,16 +128,9 @@
             "c2-standard-8": {
                 "roachprodArgs": {
                     "gce-pd-volume-size": "1000"
-                },
-                "benchArgs": {
-                    "tpcc": "-A 400 -W 900 -I 50 -d 30m"
                 }
             },
-            "c2-standard-30": {
-                "benchArgs": {
-                    "tpcc": "-A 400 -W 900 -I 50 -d 30m"
-                }
-            },
+            "c2-standard-30": null,
             "n2-highmem-8": {
                 "roachprodArgs": {
                     "gce-pd-volume-size": "1000"
@@ -175,6 +164,9 @@
             "gce-pd-volume-type": "pd-extreme",
             "gce-pd-volume-size": "2500",
             "gce-min-cpu-platform": "Intel Cascade Lake"
+        },
+        "benchArgs": {
+            "tpcc": " -L \"--provider-override=gs --bucket-override=cloud-report-tpcc\" -d 30m -W 10000 "
         }
     }
 ]

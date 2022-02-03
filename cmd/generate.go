@@ -74,14 +74,18 @@ type scriptData struct {
 
 const driverTemplate = `#!/bin/bash
 
+NAME_EXTRA=${NAME_EXTRA:=ori}
+
 CLOUD="{{.CloudDetails.Cloud}}"
-CLUSTER="$CRL_USERNAME-{{.Cluster}}"
+CLUSTER="$CRL_USERNAME-{{.Cluster}}-$NAME_EXTRA"
 TMUX_SESSION="cloud-report"
 WEST_CLUSTER="${CLUSTER}-west"
 west_cluster_created=''
 
 # If env var NODES is not specified, set NODES to 4.
 NODES=${NODES:=4}
+
+TPCC_WAREHOURSE_PER_VCPU=${TPCC_WAREHOURSE_PER_VCPU:=125}
 
 # We start different ports for testserver for the cross-region and intra-az network test.
 CROSS_REGION_PORT=12865
@@ -93,7 +97,7 @@ logdir="$(dirname $0)/../logs/${scriptName}"
 mkdir -p "$logdir"
 
 # Redirect stdout and stderr into script log file
-exec &> >(tee -a "$logdir/driver.log")
+exec &> >(tee -a "$logdir/driver-$NAME_EXTRA.log")
 
 # Create roachprod cluster
 function create_cluster() {
@@ -132,7 +136,7 @@ function load_cockroach() {
   then
     cockroach_version=$(curl -s -i https://edge-binaries.cockroachdb.com/cockroach/cockroach.linux-gnu-amd64.LATEST |grep location|awk -F"/" '{print $NF}')
     echo "WARN: staging a stable cockroach binary from master with hash: 5ac733bb4927020bc1c52da24b2591742fde8e1f"
-    roachprod stage "$1" cockroach 5ac733bb4927020bc1c52da24b2591742fde8e1f
+    roachprod stage "$1" cockroach 
   elif [[ $cockroach_binary =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
     echo "INFO: staging release version $cockroach_binary of cockroach binary"
     roachprod stage "$1" release "$cockroach_binary"
@@ -287,20 +291,23 @@ function fetch_bench_net_results() {
 
 # Run TPCC Benchmark
 function bench_tpcc() {
-  if [ $NODES -lt 2 ]
-  then
+  if [ $NODES -lt 2 ]; then
     echo "NODES must be greater than 1 for this test"
     exit 1
   fi
 
+  if [[ -z $TPCC_WAREHOURSE_PER_VCPU ]]; then
+    echo "env var TPCC_WAREHOURSE_PER_VCPU must not be set empty"
+    exit 1
+  fi
+
   start_cockroach
-  if [ $NODES -eq 2 ]
-  then
+  if [ $NODES -eq 2 ]; then
     pgurls=$(roachprod pgurl "$CLUSTER":1)
-    run_under_tmux "tpcc" "$CLUSTER:2" "./scripts/gen/tpcc.sh $tpcc_extra_args ${pgurls[@]}"
+    run_under_tmux "tpcc" "$CLUSTER:2" "./scripts/gen/tpcc.sh -a $TPCC_WAREHOURSE_PER_VCPU $tpcc_extra_args ${pgurls[@]}"
   else
     pgurls=$(roachprod pgurl "$CLUSTER":1-$((NODES-1)))
-    run_under_tmux "tpcc" "$CLUSTER:$NODES" "./scripts/gen/tpcc.sh $tpcc_extra_args ${pgurls[@]}"
+    run_under_tmux "tpcc" "$CLUSTER:$NODES" "./scripts/gen/tpcc.sh -a $TPCC_WAREHOURSE_PER_VCPU $tpcc_extra_args ${pgurls[@]}"
   fi
 }
 
