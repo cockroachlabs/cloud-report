@@ -136,7 +136,7 @@ function load_cockroach() {
   then
     cockroach_version=$(curl -s -i https://edge-binaries.cockroachdb.com/cockroach/cockroach.linux-gnu-amd64.LATEST |grep location|awk -F"/" '{print $NF}')
     echo "WARN: staging a stable cockroach binary from master with hash: 5ac733bb4927020bc1c52da24b2591742fde8e1f"
-    roachprod stage "$1" cockroach 
+    roachprod stage "$1" cockroach
   elif [[ $cockroach_binary =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
     echo "INFO: staging release version $cockroach_binary of cockroach binary"
     roachprod stage "$1" release "$cockroach_binary"
@@ -319,8 +319,12 @@ function fetch_bench_tpcc_results() {
   fi
 
   node="$CLUSTER":$NODES
+  
+  # Don't exist if the following section gives error.
+  set +e
   roachprod run $node ./scripts/gen/tpcc.sh -- -w
   copy_result_with_retry $node "tpcc-results"
+  set -e 
 }
 
 # modify_remote_hosts_on_client_node is to get the ip from the remote node, 
