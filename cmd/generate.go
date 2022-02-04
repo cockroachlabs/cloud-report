@@ -186,7 +186,7 @@ function run_under_tmux() {
 # results_dir returns date suffixed directory under logdir.
 #
 function results_dir() {
-  echo "$logdir/$1.$(date +%Y%m%d.%T)"
+  echo "$logdir/$1.$(date +%Y%m%d.%T)-$NAME_EXTRA"
 }
 
 function copy_result_with_retry() {
