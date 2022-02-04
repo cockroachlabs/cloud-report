@@ -102,7 +102,7 @@ then
   fi
 fi
 
-report="${logdir}/tpcc-results-adaptive.txt"
+report="${logdir}/tpcc-results-$f_active.txt"
 ./cockroach workload run tpcc \
   --warehouses="$f_warehouses" --active-warehouses="$f_active" --ramp=5m --duration="$f_duration" --tolerate-errors --wait=0 \
   "${pgurls[@]}" > "$report"
