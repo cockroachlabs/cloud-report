@@ -92,17 +92,29 @@ then
   echo "done loading"
 fi
 
+num_vcpu_per_node=$(cat /proc/cpuinfo | grep processor | wc -l)
+
 if (( f_active == 0 ))
 then
   # Scale active warehouse count by f_active_per_core * number of CPUs.
-  f_active=$(( f_active_per_core * $(cat /proc/cpuinfo | grep processor | wc -l) ))
+  f_active=$(( f_active_per_core * num_vcpu_per_node ))
   if (( f_active > f_warehouses ))
   then
     f_active=0
   fi
 fi
 
+# The number of cockroachdb server to run the tpcc tests.
+num_servers=${#pgurls[@]}
+echo "num_servers:$num_nodes, num_vcpu_per_node:$num_vcpu_per_node, conns=$((num_vcpu_per_node * num_servers * 4))"
+
+# We limit the number of connections to 4 * #crdb_server * #vcpu_per_node,
+# because in the production practice, "the total number of workload connections
+# across all connection pools should not exceed 4 times the number of vCPUs in
+# the cluster by a large amount."
+# See also: https://www.cockroachlabs.com/docs/stable/recommended-production-settings.html#connection-pooling
+
 report="${logdir}/tpcc-results-$f_active.txt"
 ./cockroach workload run tpcc \
-  --warehouses="$f_warehouses" --active-warehouses="$f_active" --ramp=5m --duration="$f_duration" --tolerate-errors --wait=0 \
+  --warehouses="$f_warehouses" --active-warehouses="$f_active"  --conns=$((num_vcpu_per_node * num_servers * 4))  --ramp=5m --duration="$f_duration" --tolerate-errors --wait=0 \
   "${pgurls[@]}" > "$report"
