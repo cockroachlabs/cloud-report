@@ -725,6 +725,7 @@ type tpccResult struct {
 	runs              []*tpccRun
 	modtime           time.Time
 	machine, disktype string
+	warehouses        string
 }
 
 type tpccAnalyzer struct {
@@ -756,7 +757,7 @@ func (t *tpccAnalyzer) Close() error {
 				res.disktype,
 				res.modtime.String(),
 				res.machine,
-				fmt.Sprintf("%d", run.warehouses),
+				res.warehouses,
 				fmt.Sprintf("%t", run.pass()),
 				fmt.Sprintf("%f", run.tpmC),
 				fmt.Sprintf("%f", run.efc),
@@ -834,8 +835,17 @@ func parseTPCCRun(p string) (*tpccRun, error) {
 	return run, nil
 }
 
+func getWarehouseFromFilename(filename string) (string, error) {
+	pattern := `tpcc-results-(\d+).+`
+	res := regexp.MustCompile(pattern).FindStringSubmatch(filename)
+	if len(res) < 2 {
+		return "", fmt.Errorf("cannot find the number of warehouses from filename %s", filename)
+	}
+	return res[1], nil
+}
+
 func (t *tpccAnalyzer) analyzeTPCC(cloud CloudDetails, machineType string) error {
-	glob := path.Join(cloud.LogDir(), FormatMachineType(machineType), "tpcc-results.*/success")
+	glob := path.Join(cloud.LogDir(), FormatMachineType(machineType), "tpcc-results.*/tpcc-result*.txt")
 	goodRuns, err := filepath.Glob(glob)
 	if err != nil {
 		return err
@@ -848,21 +858,29 @@ func (t *tpccAnalyzer) analyzeTPCC(cloud CloudDetails, machineType string) error
 		if err != nil {
 			return err
 		}
-		machineKey := fmt.Sprintf("%s-%s", cloud.Group, machineType)
+		warehouses, err := getWarehouseFromFilename(filepath.Base(r))
+		if err != nil {
+			return errors.Wrapf(err, "cannot analyse tpcc results")
+		}
+		machineKey := fmt.Sprintf("%s-%s-%s", cloud.Group, machineType, warehouses)
 		if res, ok := t.machineResults[machineKey]; ok && res.modtime.After(info.ModTime()) {
 			log.Printf("Skipping TPC-C throughput log %q (already analyzed newer", r)
 			continue
 		}
 		resultsFiles, err := filepath.Glob(path.Join(filepath.Dir(r), "tpcc-result*.txt"))
+
 		if err != nil {
 			return err
 		}
+
 		res := &tpccResult{
-			modtime:  info.ModTime(),
-			disktype: cloud.Group,
-			machine:  machineType,
+			modtime:    info.ModTime(),
+			disktype:   cloud.Group,
+			machine:    machineType,
+			warehouses: warehouses,
 		}
 		t.machineResults[machineKey] = res
+
 		for _, f := range resultsFiles {
 			run, err := parseTPCCRun(f)
 			if err != nil {
