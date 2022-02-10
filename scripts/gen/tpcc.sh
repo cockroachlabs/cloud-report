@@ -78,6 +78,12 @@ exec &> >(tee -a "$logdir/script.log")
 
 cd "$HOME"
 
+workload_binary="./cockroach"
+if [ -f "./cockroach_workload" ]; then
+  echo "Using cockroach_workload binary for workload generation"
+  workload_binary="./cockroach_workload"
+fi
+
 if [ -z "$f_skip_load" ]
 then
   #./cockroach sql --insecure --url "${pgurls[0]}" -e "
@@ -88,7 +94,7 @@ then
 	# SET CLUSTER SETTING admission.sql_sql_response.enabled=false;
   #";
   echo "Loading TPCC fixture for $f_warehouses warehouses ..."
-  ./cockroach workload fixtures load tpcc --checks=false --warehouses="$f_warehouses" $f_load_args "${pgurls[0]}"
+  $workload_binary workload fixtures load tpcc --checks=false --warehouses="$f_warehouses" $f_load_args "${pgurls[0]}"
   echo "done loading"
 fi
 
@@ -115,6 +121,6 @@ echo "num_servers:$num_nodes, num_vcpu_per_node:$num_vcpu_per_node, conns=$((num
 # See also: https://www.cockroachlabs.com/docs/stable/recommended-production-settings.html#connection-pooling
 
 report="${logdir}/tpcc-results-$f_active.txt"
-./cockroach workload run tpcc \
+$workload_binary workload run tpcc \
   --warehouses="$f_warehouses" --active-warehouses="$f_active"  --conns=$((num_vcpu_per_node * num_servers * 4))  --ramp=5m --duration="$f_duration" --tolerate-errors --wait=0 \
   "${pgurls[@]}" > "$report"
