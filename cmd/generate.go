@@ -144,6 +144,12 @@ function load_cockroach() {
     echo "WARN: staging unknown version of cockroach binary from local path: $cockroach_binary"
     roachprod put "$1" "$cockroach_binary" "cockroach"
   fi
+
+  if [ -n "$workload_binary" ]
+  then
+     echo "Staging $workload_binary as cockroach workload command"
+     roachprod put "$1" "$workload_binary" "cockroach_workload"
+  fi
 }
 
 # Start cockroach cluster on nodes [1-NODES-1].
@@ -457,7 +463,7 @@ function destroy_cluster() {
 
 function usage() {
 echo "$1
-Usage: $0 [-b <bootstrap>]... [-w <workload>]... [-d] [-c cockroach_binary]
+Usage: $0 [-b <bootstrap>]... [-w <workload>]... [-d] [-c cockroach_binary] [-W workload_binary]
    -b: One or more bootstrap steps.
          -b create: creates cluster
          -b upload: uploads required scripts
@@ -472,6 +478,7 @@ Usage: $0 [-b <bootstrap>]... [-w <workload>]... [-d] [-c cockroach_binary]
        -w tpcc: Benchmark TPCC
        -w all : All of the above
    -c: Override cockroach binary to stage (local path to binary or release version)
+   -W: Override workload binary to stage (local path only).
    -r: Do not start benchmarks specified by -w.  Instead, resume waiting for their completion.
    -I: additional IO benchmark arguments
    -F: additional IO Fsync benchmark arguments
@@ -498,8 +505,9 @@ tpcc_extra_args='{{with $arg := .BenchArgs.tpcc}}{{$arg}}{{end}}'
 intra_az_net_extra_args='{{with $arg := .BenchArgs.net}}{{$arg}}{{end}}'
 cross_region_net_extra_args='{{with $arg := .BenchArgs.cross_region_net}}{{$arg}}{{end}}'
 cockroach_binary=''
+workload_binary=''
 
-while getopts 'c:b:w:dn:I:F:N:C:T:R:r' flag; do
+while getopts 'c:b:w:W:dn:I:F:N:C:T:R:r' flag; do
   case "${flag}" in
     b) case "${OPTARG}" in
         all)
@@ -515,6 +523,7 @@ while getopts 'c:b:w:dn:I:F:N:C:T:R:r' flag; do
        esac
     ;;
     c) cockroach_binary="${OPTARG}" ;;
+    W) workload_binary="${OPTARG}" ;;
     w) case "${OPTARG}" in
          cpu) benchmarks+=("bench_cpu") ;;
          io) benchmarks+=("bench_io") ;;
