@@ -106,6 +106,7 @@ function create_cluster() {
     --label {{.Usage}}
 
   roachprod run "$CLUSTER" -- tmux new -s "$TMUX_SESSION" -d
+  roachprod run "$CLUSTER" -- tmux set-option remain-on-exit on
 }
 
 # Create roachprod in us-west2
