@@ -81,7 +81,7 @@
       "aws-enable-multiple-stores": null
     },
     "benchArgs": {
-      "tpcc": " -L \" --provider-override=s3 --bucket-override=cloud-report-tpcc --auth-params-override=AUTH=implicit&AWS_REGION=us-east-1 \" -d 30m -W 10000 "
+      "tpcc": " -L \" --provider-override=s3 --bucket-override=new-cloud-report-tpcc --auth-params-override=AUTH=implicit&AWS_REGION=us-east-1 \" -d 30m -W 10000 "
     }
   },
   {
@@ -167,7 +167,7 @@
       "aws-enable-multiple-stores": null
     },
     "benchArgs": {
-      "tpcc": " -L \" --provider-override=s3 --bucket-override=cloud-report-tpcc --auth-params-override=AUTH=implicit&AWS_REGION=us-east-1 \" "
+      "tpcc": " -L \" --provider-override=s3 --bucket-override=new-cloud-report-tpcc --auth-params-override=AUTH=implicit&AWS_REGION=us-east-1 \" "
     }
   }
 ]

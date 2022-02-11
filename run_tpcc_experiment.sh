@@ -1,6 +1,5 @@
-#!/usr/local/bin/bash
+#!/bin/bash
 
-# bash version should be > 5
 
 curdate=$(date '+%Y%m%d')
 cloud=
@@ -31,17 +30,20 @@ scriptPaths=()
 
 case "${cloud}" in
   aws)
-    mapfile -t scriptPaths < <( find ./report-data/$curdate/aws -name "*.sh"|grep -v "9x"|grep -v -E )
+    scriptPaths=($(find ./report-data/$curdate/aws -name "*.sh" |tr '\n' ' '))
     ;;
   gce)
-    mapfile -t scriptPaths < <( find ./report-data/$curdate/gce -name "*.sh" |grep standard|grep -v 30 )
+    scriptPaths=($(find ./report-data/$curdate/gce -name "*.sh" |tr '\n' ' '))
+    ;;
+  azure)
+    scriptPaths=($(find ./report-data/$curdate/azure -name "*.sh" |tr '\n' ' '))
     ;;
   *)
     echo "unsupported cloud name"
     exit 1
 esac
 
-warehousePerVcpuList=( 75 100 125 150 )
+warehousePerVcpuList=( 50 75 100 125 150 )
 
 # Get the randome string with length 6.
 rand_str=$(openssl rand -base64 6)
@@ -51,16 +53,17 @@ tmux kill-session -t $session_name
 set -e
 tmux new -s $session_name -d
 
+
 for scriptPath in "${scriptPaths[@]}"
 do
   for warehousePerVcpu in "${warehousePerVcpuList[@]}"
   do
-    diskname="$(basename $(dirname $(dirname "$scriptPath") ))"
-    filename=$(basename $scriptPath)
+          diskname="$(basename $(dirname $(dirname "$scriptPath") ))"
+          filename=$(basename $scriptPath)
 
-    #echo "diskname:$diskname-$filename-$warehousePerVcpu"
-    echo "NAME_EXTRA=$warehousePerVcpu TPCC_WAREHOURSE_PER_VCPU=$warehousePerVcpu $scriptPath -b all -w tpcc -d"
-    tmux neww -t $session_name -n $diskname-$filename-$warehousePerVcpu -d -- "NAME_EXTRA=$warehousePerVcpu TPCC_WAREHOURSE_PER_VCPU=$warehousePerVcpu $scriptPath -b all -w tpcc -d"
+          #echo "diskname:$diskname-$filename-$warehousePerVcpu"
+          echo "NAME_EXTRA=$warehousePerVcpu TPCC_WAREHOURSE_PER_VCPU=$warehousePerVcpu $scriptPath -b all -w tpcc -c ./jane-21-5-new-bin "
+          tmux neww -t $session_name -n $diskname-$filename-$warehousePerVcpu -d -- "NAME_EXTRA=$warehousePerVcpu TPCC_WAREHOURSE_PER_VCPU=$warehousePerVcpu $scriptPath -b all -w tpcc -c ./jane-21-5-new-bin"
   done
   echo "------"
 done

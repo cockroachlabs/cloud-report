@@ -110,7 +110,7 @@
       "azure-disk-caching": "read-only"
     },
     "benchArgs": {
-      "tpcc": "-L \"--provider-override=azure --bucket-override=cloudreporttpcc --auth-params-override=AZURE_ACCOUNT_NAME=cloudreporttpcc&AZURE_ACCOUNT_KEY=PASTE_ACCOUNT_KEY_HERE \" -d 30m -W 10000"
+      "tpcc": "-L \"--provider-override=azure --bucket-override=new2cloudreporttpcc --auth-params-override=AZURE_ACCOUNT_NAME=new2cloudreporttpcc&AZURE_ACCOUNT_KEY=PASTE_ACCOUNT_KEY_HERE\" -d 30m -W 10000"
     }
   },
   {
@@ -224,7 +224,7 @@
       "azure-ultra-disk-iops": "16000"
     },
     "benchArgs": {
-      "tpcc": "-L \"--provider-override=azure --bucket-override=cloudreporttpcc --auth-params-override=AZURE_ACCOUNT_NAME=cloudreporttpcc&AZURE_ACCOUNT_KEY=PASTE_ACCOUNT_KEY_HERE \" -d 30m -W 10000"
+      "tpcc": "-L \"--provider-override=azure --bucket-override=new2cloudreporttpcc --auth-params-override=AZURE_ACCOUNT_NAME=new2cloudreporttpcc&AZURE_ACCOUNT_KEY=PASTE_ACCOUNT_KEY_HERE\" -d 30m -W 10000"
     }
   }
 ]

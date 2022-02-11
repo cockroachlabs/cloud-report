@@ -84,7 +84,7 @@
             "gce-min-cpu-platform": "Intel Cascade Lake"
         },
         "benchArgs": {
-            "tpcc": " -L \"--provider-override=gs --bucket-override=cloud-report-tpcc\" "
+            "tpcc": " -L \"--provider-override=gs --bucket-override=new-cloud-report-tpcc\" "
         }
     },
     {
@@ -166,7 +166,7 @@
             "gce-min-cpu-platform": "Intel Cascade Lake"
         },
         "benchArgs": {
-            "tpcc": " -L \"--provider-override=gs --bucket-override=cloud-report-tpcc\" -d 30m -W 10000 "
+            "tpcc": " -L \"--provider-override=gs --bucket-override=new-cloud-report-tpcc\" -d 30m -W 10000 "
         }
     }
 ]
