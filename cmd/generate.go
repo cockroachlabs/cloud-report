@@ -153,7 +153,11 @@ function start_cockroach() {
   # Roachprod adds /mnt/data1/cockroach by itself, so, we'll pick up the other disks
   for s in $(roachprod run "$CLUSTER":1 'ls -1d /mnt/data[2-9]* 2>/dev/null || echo')
   do
-   stores="$stores --store $s/cockroach"
+   if [[ -z $stores ]]; then
+       stores="--store $s/cockroach"
+   else
+       stores="$stores --store $s/cockroach"
+   fi
   done
 
   if [[ -z $stores ]]; then

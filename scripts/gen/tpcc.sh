@@ -81,10 +81,10 @@ cd "$HOME"
 if [ -z "$f_skip_load" ]
 then
   ./cockroach sql --insecure --url "${pgurls[0]}" -e "
-	 SET CLUSTER SETTING admission.kv.enabled = false;
-	 SET CLUSTER SETTING admission.sql_kv_response.enabled = false;
-	 SET CLUSTER SETTING admission.sql_sql_response.enabled = false;
-	 SET CLUSTER SETTING server.consistency_check.interval = '0s';
+   SET CLUSTER SETTING admission.kv.enabled = false;
+   SET CLUSTER SETTING admission.sql_kv_response.enabled = false;
+   SET CLUSTER SETTING admission.sql_sql_response.enabled = false;
+   SET CLUSTER SETTING server.consistency_check.interval = '0s';
    SET CLUSTER SETTING kv.range_merge.queue_enabled = false;
    SET CLUSTER SETTING sql.stats.automatic_collection.enabled = false;
   ";
@@ -94,7 +94,7 @@ then
   echo "done loading"
 fi
 
-num_vcpu_per_node=$(cat /proc/cpuinfo | grep processor | wc -l)
+num_vcpu_per_node=$(cat /proc/cpuinfo | grep -c processor)
 
 if (( f_active == 0 ))
 then
@@ -122,4 +122,5 @@ report="${logdir}/tpcc-results-$f_active.txt"
   --warehouses="$f_warehouses" --active-warehouses="$f_active" --conns=$((num_vcpu_per_node * num_servers * 4))  --ramp=5m --duration="$f_duration" --tolerate-errors --wait=0 \
   "${pgurls[@]}" > "$report"
 
+# If we made it this far, create 'success' file to denote a successful completion of the experiment.
 touch "$logdir/success"

@@ -1,6 +1,5 @@
 #!/bin/bash
 
-
 curdate=$(date '+%Y%m%d')
 cloud=
 args=
@@ -58,12 +57,11 @@ for scriptPath in "${scriptPaths[@]}"
 do
   for warehousePerVcpu in "${warehousePerVcpuList[@]}"
   do
-          diskname="$(basename $(dirname $(dirname "$scriptPath") ))"
-          filename=$(basename $scriptPath)
+    instanceType="$(basename $scriptPath | awk -F"." '{print $1}')"
+    diskType="$(basename $(dirname $(dirname "$scriptPath") ))"
 
-          #echo "diskname:$diskname-$filename-$warehousePerVcpu"
-          echo "NAME_EXTRA=$warehousePerVcpu TPCC_WAREHOURSE_PER_VCPU=$warehousePerVcpu $scriptPath -b all -w tpcc -c ./jane-21-5-new-bin "
-          tmux neww -t $session_name -n $diskname-$filename-$warehousePerVcpu -d -- "NAME_EXTRA=$warehousePerVcpu TPCC_WAREHOURSE_PER_VCPU=$warehousePerVcpu $scriptPath -b all -w tpcc -c ./jane-21-5-new-bin"
+    echo "NAME_EXTRA=$warehousePerVcpu TPCC_WAREHOURSE_PER_VCPU=$warehousePerVcpu $scriptPath -b all -w tpcc -d"
+    tmux neww -t $session_name -n $instanceType-$diskType-$warehousePerVcpu -d -- "NAME_EXTRA=$warehousePerVcpu TPCC_WAREHOURSE_PER_VCPU=$warehousePerVcpu $scriptPath -b all -w tpcc -d -c ./your_local_bin_name"
   done
   echo "------"
 done
