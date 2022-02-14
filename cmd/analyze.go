@@ -288,7 +288,7 @@ func (f *fioAnalyzer) Analyze(cloud CloudDetails) error {
 //
 // CPU Analysis
 //
-const cpuCSVHeader = "Cloud,Date,MachineType,Cores,Single,Multi,Multi/vCPU"
+const cpuCSVHeader = "Cloud,Date,MachineType,Cores,Single,Multi,Multi/warehousePerVCPU"
 
 type coremarkResult struct {
 	cores   int64
@@ -726,6 +726,7 @@ type tpccResult struct {
 	modtime           time.Time
 	machine, disktype string
 	warehouses        string
+	warehousePerVCPU  string
 }
 
 type tpccAnalyzer struct {
@@ -740,7 +741,7 @@ func newTPCCAnalyzer(cloud string) resultsAnalyzer {
 	}
 }
 
-const tpccCSVHeader = "Cloud,Group,Date,MachineType,Warehouses,Pass,TpmC,Efc,Avg,P50,P90,P95,P99,PMax"
+const tpccCSVHeader = "Cloud,Group,Date,MachineType,Warehouses,warehousePerVCPU,Pass,TpmC,Efc,Avg,P50,P90,P95,P99,PMax"
 
 func (t *tpccAnalyzer) Close() error {
 	f, err := os.OpenFile(ResultsFile("tpcc.csv", t.cloud), os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
@@ -758,6 +759,7 @@ func (t *tpccAnalyzer) Close() error {
 				res.modtime.String(),
 				res.machine,
 				res.warehouses,
+				res.warehousePerVCPU,
 				fmt.Sprintf("%t", run.pass()),
 				fmt.Sprintf("%f", run.tpmC),
 				fmt.Sprintf("%f", run.efc),
@@ -835,13 +837,23 @@ func parseTPCCRun(p string) (*tpccRun, error) {
 	return run, nil
 }
 
-func getWarehouseFromFilename(filename string) (string, error) {
-	pattern := `tpcc-results-(\d+).+`
+type tpccRunKey struct {
+	vCPU, runID, warehouses string
+}
+
+func tpccRunKeyFromFileName(filename string) (tpccRunKey, error) {
+	// Example path: tpcc-results.20220213.13:38:06-125-3/tpcc-results-1000.txt
+	// Extract number warehousePerVCPU per core, run id, and warehouse count.
+	pattern := `tpcc-results\..*?-(\d+)-(\d+)/tpcc-results-(\d+).+`
 	res := regexp.MustCompile(pattern).FindStringSubmatch(filename)
-	if len(res) < 2 {
-		return "", fmt.Errorf("cannot find the number of warehouses from filename %s", filename)
+	if len(res) < 4 {
+		return tpccRunKey{}, fmt.Errorf("cannot find the number of warehouses from filename %s", filename)
 	}
-	return res[1], nil
+	return tpccRunKey{
+		vCPU:       res[1],
+		runID:      res[2],
+		warehouses: res[3],
+	}, nil
 }
 
 func (t *tpccAnalyzer) analyzeTPCC(cloud CloudDetails, machineType string) error {
@@ -858,11 +870,11 @@ func (t *tpccAnalyzer) analyzeTPCC(cloud CloudDetails, machineType string) error
 		if err != nil {
 			return err
 		}
-		warehouses, err := getWarehouseFromFilename(filepath.Base(r))
+		runKey, err := tpccRunKeyFromFileName(r)
 		if err != nil {
 			return errors.Wrapf(err, "cannot analyse tpcc results")
 		}
-		machineKey := fmt.Sprintf("%s-%s-%s", cloud.Group, machineType, warehouses)
+		machineKey := fmt.Sprintf("%s-%s-%s-%s", cloud.Group, machineType, runKey.warehouses, runKey.runID)
 		if res, ok := t.machineResults[machineKey]; ok && res.modtime.After(info.ModTime()) {
 			log.Printf("Skipping TPC-C throughput log %q (already analyzed newer", r)
 			continue
@@ -874,10 +886,11 @@ func (t *tpccAnalyzer) analyzeTPCC(cloud CloudDetails, machineType string) error
 		}
 
 		res := &tpccResult{
-			modtime:    info.ModTime(),
-			disktype:   cloud.Group,
-			machine:    machineType,
-			warehouses: warehouses,
+			modtime:          info.ModTime(),
+			disktype:         cloud.Group,
+			machine:          machineType,
+			warehouses:       runKey.warehouses,
+			warehousePerVCPU: runKey.vCPU,
 		}
 		t.machineResults[machineKey] = res
 
