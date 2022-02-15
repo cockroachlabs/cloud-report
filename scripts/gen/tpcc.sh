@@ -119,7 +119,13 @@ echo "num_servers:$num_servers, num_vcpu_per_node:$num_vcpu_per_node, f_active=$
 
 report="${logdir}/tpcc-results-$f_active.txt"
 ./cockroach workload run tpcc \
-  --warehouses="$f_warehouses" --active-warehouses="$f_active" --conns=$((num_vcpu_per_node * num_servers * 4))  --ramp=5m --duration="$f_duration" --tolerate-errors --wait=0 \
+  --warehouses="$f_warehouses" \
+  --active-warehouses="$f_active" \
+  --conns=$((num_vcpu_per_node * num_servers * 4)) \
+  --ramp=5m --duration="$f_duration" \
+  --tolerate-errors \
+  --wait=0 \
+  --worker=$f_active \
   "${pgurls[@]}" > "$report"
 
 touch "$logdir/success"

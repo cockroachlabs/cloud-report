@@ -171,7 +171,7 @@ function start_cockroach() {
 function setup_cluster() {
 	roachprod run "$1" sudo ./scripts/gen/setup.sh "$CLOUD"
 	roachprod run "$1":1 -- cpufetch -s legacy|awk -F"@" '{print $NF}'|tr -d ' '|awk NF > "$logdir"/"$1"_cpu_info.txt
-    roachprod run "$1":1 -- lscpu |grep "MHz" >> "$logdir"/"$1"_cpu_info.txt
+    roachprod run "$1":1 -- lscpu  >> "$logdir"/"$1"_cpu_info.txt
 }
 
 # executes command on a host using roachprod, under tmux session.
