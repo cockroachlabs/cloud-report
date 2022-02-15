@@ -28,6 +28,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var includeTpccFail bool
+
 // analyzeCmd represents the analyze command
 var analyzeCmd = &cobra.Command{
 	Use:   "analyze",
@@ -39,6 +41,7 @@ var analyzeCmd = &cobra.Command{
 }
 
 func init() {
+	analyzeCmd.PersistentFlags().BoolVar(&includeTpccFail, "include-tpcc-fail", false, "include tpcc failed results")
 	rootCmd.AddCommand(analyzeCmd)
 }
 
@@ -288,7 +291,7 @@ func (f *fioAnalyzer) Analyze(cloud CloudDetails) error {
 //
 // CPU Analysis
 //
-const cpuCSVHeader = "Cloud,Date,MachineType,Cores,Single,Multi,Multi/warehousePerVCPU"
+const cpuCSVHeader = "Cloud,Date,MachineType,Cores,Single,Multi,Multi/vCPU"
 
 type coremarkResult struct {
 	cores   int64
@@ -857,13 +860,13 @@ func tpccRunKeyFromFileName(filename string) (tpccRunKey, error) {
 }
 
 func (t *tpccAnalyzer) analyzeTPCC(cloud CloudDetails, machineType string) error {
-	glob := path.Join(cloud.LogDir(), FormatMachineType(machineType), "tpcc-results.*/tpcc-result*.txt")
-	goodRuns, err := filepath.Glob(glob)
+	// NB: each _completed_ (either passed or failed) TPCC run must include 'success' file
+	glob := path.Join(cloud.LogDir(), FormatMachineType(machineType), "tpcc-results.*/success")
+	runs, err := filepath.Glob(glob)
 	if err != nil {
 		return err
 	}
-
-	for _, r := range goodRuns {
+	for _, r := range runs {
 		// Read the tpcc-results
 		log.Printf("Analyzing %s", r)
 		info, err := os.Stat(r)
@@ -879,10 +882,17 @@ func (t *tpccAnalyzer) analyzeTPCC(cloud CloudDetails, machineType string) error
 			log.Printf("Skipping TPC-C throughput log %q (already analyzed newer", r)
 			continue
 		}
-		resultsFiles, err := filepath.Glob(path.Join(filepath.Dir(r), "tpcc-result*.txt"))
-
+		resultFiles, err := filepath.Glob(path.Join(filepath.Dir(r),
+			fmt.Sprintf("tpcc-results-%s.txt", runKey.warehouses)))
 		if err != nil {
 			return err
+		}
+		if includeTpccFail {
+			failedResultFile, err := filepath.Glob(path.Join(filepath.Dir(r),
+				fmt.Sprintf("tpcc-results-%s.bak", runKey.warehouses)))
+			if err != nil {
+				resultFiles = append(resultFiles, failedResultFile...)
+			}
 		}
 
 		res := &tpccResult{
@@ -894,7 +904,7 @@ func (t *tpccAnalyzer) analyzeTPCC(cloud CloudDetails, machineType string) error
 		}
 		t.machineResults[machineKey] = res
 
-		for _, f := range resultsFiles {
+		for _, f := range resultFiles {
 			run, err := parseTPCCRun(f)
 			if err != nil {
 				return err
