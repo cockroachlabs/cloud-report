@@ -288,7 +288,7 @@ func (f *fioAnalyzer) Analyze(cloud CloudDetails) error {
 //
 // CPU Analysis
 //
-const cpuCSVHeader = "Cloud,Date,MachineType,Cores,Single,Multi,Multi/warehousePerVCPU"
+const cpuCSVHeader = "Cloud,Date,MachineType,Cores,Single,Multi,Multi/vCPU"
 
 type coremarkResult struct {
 	cores   int64
@@ -711,9 +711,15 @@ func parseNetperfLog(filePath string, res *networkResult, cloud string) error {
 
 var _ resultsAnalyzer = &netAnalyzer{}
 
+type cpuInfo struct {
+	numaNodes int64
+	modelName string
+}
+
 type tpccRun struct {
 	tpmC, efc, avg, p50, p90, p95, p99, pMax float64
 	warehouses                               int64
+	cpus                                     []cpuInfo
 }
 
 func (r *tpccRun) pass() bool {
@@ -750,9 +756,23 @@ func (t *tpccAnalyzer) Close() error {
 	}
 	defer func() { err = f.Close() }()
 
-	fmt.Fprintf(f, "%s\n", tpccCSVHeader)
+	headerPrinted := false
+	maybePrintHeader := func(numMachines int) {
+		if headerPrinted {
+			return
+		}
+		headerPrinted = true
+		header := tpccCSVHeader
+		for i := 0; i < numMachines; i++ {
+			header += fmt.Sprintf(",Numa%d,Model%d", i, i)
+		}
+		fmt.Fprintf(f, "%s\n", header)
+	}
+
 	for _, res := range t.machineResults {
 		for _, run := range res.runs {
+			maybePrintHeader(len(run.cpus))
+
 			fields := []string{
 				t.cloud,
 				res.disktype,
@@ -770,11 +790,51 @@ func (t *tpccAnalyzer) Close() error {
 				fmt.Sprintf("%f", run.p99),
 				fmt.Sprintf("%f", run.pMax),
 			}
+			for _, info := range run.cpus {
+				fields = append(fields, fmt.Sprintf("%d", info.numaNodes), info.modelName)
+			}
 			fmt.Fprintf(f, "%s\n", strings.Join(fields, ","))
 		}
 	}
 
 	return nil
+}
+
+func parseCPUInfo(p string) (cpus []cpuInfo, _ error) {
+	cmd := exec.Command("sh", "-c",
+		fmt.Sprintf("grep 'NUMA node(s):' %s | cut -d: -f2", p))
+	out, err := cmd.Output()
+	if err != nil {
+		return nil, errors.Wrapf(err, "parseCPUInfo failed: %s", p)
+	}
+	numas := strings.Split(string(out), "\n")
+
+	cmd = exec.Command("sh", "-c",
+		fmt.Sprintf("grep 'Model name:' %s | cut -d: -f2", p))
+	out, err = cmd.Output()
+	if err != nil {
+		return nil, errors.Wrapf(err, "parseCPUInfo failed")
+	}
+	models := strings.Split(string(out), "\n")
+
+	if len(numas) != len(models) || len(numas) == 0 {
+		return nil, errors.AssertionFailedf("expected matching number of numas and models")
+	}
+
+	for i := 0; i < len(numas); i++ {
+		if len(numas[i]) == 0 {
+			continue
+		}
+		n, err := strconv.ParseInt(strings.TrimSpace(numas[i]), 10, 64)
+		if err != nil {
+			return nil, err
+		}
+		cpus = append(cpus, cpuInfo{
+			numaNodes: n,
+			modelName: strings.TrimSpace(models[i]),
+		})
+	}
+	return cpus, nil
 }
 
 func parseTPCCRun(p string) (*tpccRun, error) {
@@ -834,15 +894,20 @@ func parseTPCCRun(p string) (*tpccRun, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "error parsing %q in %s", pieces[8], p)
 	}
+	cpus, err := parseCPUInfo(filepath.Join(filepath.Dir(p), "cpu_info.txt"))
+	if err != nil {
+		return nil, err
+	}
+	run.cpus = cpus
 	return run, nil
 }
 
 type tpccRunKey struct {
-	vCPU, runID, warehouses string
+	warehousePerVCPU, runID, warehouses string
 }
 
 func tpccRunKeyFromFileName(filename string) (tpccRunKey, error) {
-	// Example path: tpcc-results.20220213.13:38:06-125-3/tpcc-results-1000.txt
+	// Example path: tpcc-results.20220213.13:38:06-125-4-3/tpcc-results-1000.txt
 	// Extract number warehousePerVCPU per core, run id, and warehouse count.
 	pattern := `tpcc-results\..*?-(\d+)-(\d+)/tpcc-results-(\d+).+`
 	res := regexp.MustCompile(pattern).FindStringSubmatch(filename)
@@ -850,9 +915,9 @@ func tpccRunKeyFromFileName(filename string) (tpccRunKey, error) {
 		return tpccRunKey{}, fmt.Errorf("cannot find the number of warehouses from filename %s", filename)
 	}
 	return tpccRunKey{
-		vCPU:       res[1],
-		runID:      res[2],
-		warehouses: res[3],
+		warehousePerVCPU: res[1],
+		runID:            res[2],
+		warehouses:       res[3],
 	}, nil
 }
 
@@ -863,7 +928,7 @@ func (t *tpccAnalyzer) analyzeTPCC(cloud CloudDetails, machineType string) error
 		return err
 	}
 
-	for _, r := range goodRuns {
+	for i, r := range goodRuns {
 		// Read the tpcc-results
 		log.Printf("Analyzing %s", r)
 		info, err := os.Stat(r)
@@ -874,7 +939,7 @@ func (t *tpccAnalyzer) analyzeTPCC(cloud CloudDetails, machineType string) error
 		if err != nil {
 			return errors.Wrapf(err, "cannot analyse tpcc results")
 		}
-		machineKey := fmt.Sprintf("%s-%s-%s-%s", cloud.Group, machineType, runKey.warehouses, runKey.runID)
+		machineKey := fmt.Sprintf("%s-%s-%s-%s-%d", cloud.Group, machineType, runKey.warehouses, runKey.runID, i)
 		if res, ok := t.machineResults[machineKey]; ok && res.modtime.After(info.ModTime()) {
 			log.Printf("Skipping TPC-C throughput log %q (already analyzed newer", r)
 			continue
@@ -890,14 +955,15 @@ func (t *tpccAnalyzer) analyzeTPCC(cloud CloudDetails, machineType string) error
 			disktype:         cloud.Group,
 			machine:          machineType,
 			warehouses:       runKey.warehouses,
-			warehousePerVCPU: runKey.vCPU,
+			warehousePerVCPU: runKey.warehousePerVCPU,
 		}
 		t.machineResults[machineKey] = res
 
 		for _, f := range resultsFiles {
 			run, err := parseTPCCRun(f)
 			if err != nil {
-				return err
+				fmt.Errorf("failed to parse tpcc run %s", f)
+				continue
 			}
 			res.runs = append(res.runs, run)
 		}
