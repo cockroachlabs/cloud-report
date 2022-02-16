@@ -125,7 +125,7 @@ report="${logdir}/tpcc-results-$f_active.txt"
   --ramp=5m --duration="$f_duration" \
   --tolerate-errors \
   --wait=0 \
-  --worker=$f_active \
+  --workers=$f_active \
   "${pgurls[@]}" > "$report"
 
 touch "$logdir/success"
