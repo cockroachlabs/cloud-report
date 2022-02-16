@@ -288,7 +288,7 @@ func (f *fioAnalyzer) Analyze(cloud CloudDetails) error {
 //
 // CPU Analysis
 //
-const cpuCSVHeader = "Cloud,Date,MachineType,Cores,Single,Multi,Multi/warehousePerVCPU"
+const cpuCSVHeader = "Cloud,Date,MachineType,Cores,Single,Multi,Multi/vCPU"
 
 type coremarkResult struct {
 	cores   int64
@@ -714,6 +714,7 @@ var _ resultsAnalyzer = &netAnalyzer{}
 type tpccRun struct {
 	tpmC, efc, avg, p50, p90, p95, p99, pMax float64
 	warehouses                               int64
+	numaNodes                                int64
 }
 
 func (r *tpccRun) pass() bool {
@@ -838,11 +839,11 @@ func parseTPCCRun(p string) (*tpccRun, error) {
 }
 
 type tpccRunKey struct {
-	vCPU, runID, warehouses string
+	warehousePerVCPU, runID, warehouses string
 }
 
 func tpccRunKeyFromFileName(filename string) (tpccRunKey, error) {
-	// Example path: tpcc-results.20220213.13:38:06-125-3/tpcc-results-1000.txt
+	// Example path: tpcc-results.20220213.13:38:06-125-4-3/tpcc-results-1000.txt
 	// Extract number warehousePerVCPU per core, run id, and warehouse count.
 	pattern := `tpcc-results\..*?-(\d+)-(\d+)/tpcc-results-(\d+).+`
 	res := regexp.MustCompile(pattern).FindStringSubmatch(filename)
@@ -850,9 +851,9 @@ func tpccRunKeyFromFileName(filename string) (tpccRunKey, error) {
 		return tpccRunKey{}, fmt.Errorf("cannot find the number of warehouses from filename %s", filename)
 	}
 	return tpccRunKey{
-		vCPU:       res[1],
-		runID:      res[2],
-		warehouses: res[3],
+		warehousePerVCPU: res[1],
+		runID:            res[2],
+		warehouses:       res[3],
 	}, nil
 }
 
@@ -890,7 +891,7 @@ func (t *tpccAnalyzer) analyzeTPCC(cloud CloudDetails, machineType string) error
 			disktype:         cloud.Group,
 			machine:          machineType,
 			warehouses:       runKey.warehouses,
-			warehousePerVCPU: runKey.vCPU,
+			warehousePerVCPU: runKey.warehousePerVCPU,
 		}
 		t.machineResults[machineKey] = res
 

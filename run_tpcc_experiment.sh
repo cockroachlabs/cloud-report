@@ -1,5 +1,6 @@
-#!/bin/bash
+#!/opt/homebrew/bin/bash
 
+# bash version should be > 5
 
 curdate=$(date '+%Y%m%d')
 cloud=
@@ -24,46 +25,87 @@ while getopts 'a:d:c:' flag; do
   esac
 done
 
+if [ -z "CRL_USERNAME" ]
+  export CRL_USERNAME=$USER
+fi
+
 echo curdate=$curdate
 
-scriptPaths=()
 
-case "${cloud}" in
-  aws)
-    scriptPaths=($(find ./report-data/$curdate/aws -name "*.sh" |tr '\n' ' '))
-    ;;
-  gce)
-    scriptPaths=($(find ./report-data/$curdate/gce -name "*.sh" |tr '\n' ' '))
-    ;;
-  azure)
-    scriptPaths=($(find ./report-data/$curdate/azure -name "*.sh" |tr '\n' ' '))
-    ;;
-  *)
-    echo "unsupported cloud name"
-    exit 1
-esac
+# The rest of the arguments may contain paths to the scripts to execute.
+# If not specified, attempts to find scripts in the cloud directory.
+shift $((OPTIND - 1 ))
+scriptPaths=("$@")
 
-warehousePerVcpuList=( 50 75 100 125 150 )
+if [[ ${#scriptPaths[@]} == 0 ]]
+then
+  case "${cloud}" in
+    aws)
+      mapfile -t scriptPaths < <( find ./report-data/$curdate/aws -name "*.sh" )
+      ;;
+    gce)
+      mapfile -t scriptPaths < <( find ./report-data/$curdate/gce -name "*.sh" |grep standard|grep -v 30 )
+      ;;
+    *)
+      echo "unsupported cloud name"
+      exit 1
+  esac
+fi
 
-# Get the randome string with length 6.
-rand_str=$(openssl rand -base64 6)
-session_name="run_tpcc_experiment_${cloud}_${rand_str}"
-set +e
-tmux kill-session -t $session_name
-set -e
-tmux new -s $session_name -d
+warehousePerVcpuList=( 38 50 75 100 125 150 )
+
+function prompt() {
+  if [ -n "$yes_all" ]
+  then
+    return 0
+  fi
+
+  echo -n "$@ [y|Y|n]? "
+  local answer=''
+  read answer
+  case "${answer}" in
+    y) return 0 ;;
+    Y) yes_all='y'
+       return 0
+      ;;
+    *) return 1 ;;
+  esac 
+}
 
 
 for scriptPath in "${scriptPaths[@]}"
 do
+  if  ! prompt "Execute $scriptPath" 
+  then
+    echo "Skipping ..."
+    continue
+  fi
+
+  session_name="${cloud}_`basename $scriptPath .sh`"
+  set +e
+  tmux new -s $session_name -d
+  set -e
+ 
   for warehousePerVcpu in "${warehousePerVcpuList[@]}"
   do
-          diskname="$(basename $(dirname $(dirname "$scriptPath") ))"
-          filename=$(basename $scriptPath)
+    if  ! prompt "Execute $scriptPath vcpu=$warehousePerVcpu" 
+    then
+      echo "Skipping ..."
+      continue
+    fi
 
-          #echo "diskname:$diskname-$filename-$warehousePerVcpu"
-          echo "NAME_EXTRA=$warehousePerVcpu TPCC_WAREHOURSE_PER_VCPU=$warehousePerVcpu $scriptPath -b all -w tpcc -c ./jane-21-5-new-bin "
-          tmux neww -t $session_name -n $diskname-$filename-$warehousePerVcpu -d -- "NAME_EXTRA=$warehousePerVcpu TPCC_WAREHOURSE_PER_VCPU=$warehousePerVcpu $scriptPath -b all -w tpcc -c ./jane-21-5-new-bin"
+    for run in 1 2 3
+    do
+      diskname="$(basename $(dirname $(dirname "$scriptPath") ))"
+      filename=$(basename $scriptPath)
+   
+      name_extra="$warehousePerVcpu-$run"
+      echo "tmux neww -t $session_name -n $diskname-$filename-$name_extra -d -- \"NAME_EXTRA=$name_extra TPCC_EXTRA_ARGS='-a $warehousePerVcpu'  $scriptPath -b all -w tpcc -c ./cockroach-linux-2.6.32-gnu-amd64 -d\""
+      tmux neww -t $session_name -n $diskname-$filename-$name_extra -d -- "NAME_EXTRA=$name_extra TPCC_EXTRA_ARGS='-a $warehousePerVcpu' $scriptPath -b all -w tpcc -c ./cockroach-linux-2.6.32-gnu-amd64 -d"
+      echo "Sleeping for 10s"
+      sleep 10
+    done
   done
+
   echo "------"
 done

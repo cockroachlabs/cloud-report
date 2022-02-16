@@ -171,7 +171,7 @@ function start_cockroach() {
 function setup_cluster() {
 	roachprod run "$1" sudo ./scripts/gen/setup.sh "$CLOUD"
 	roachprod run "$1":1 -- cpufetch -s legacy|awk -F"@" '{print $NF}'|tr -d ' '|awk NF > "$logdir"/"$1"_cpu_info.txt
-    roachprod run "$1":1 -- lscpu  >> "$logdir"/"$1"_cpu_info.txt
+  roachprod run "$1":1 -- lscpu  >> "$logdir"/"$1"_cpu_info.txt
 }
 
 # executes command on a host using roachprod, under tmux session.
@@ -191,6 +191,10 @@ function results_dir() {
 }
 
 function copy_result_with_retry() {
+  local node=$1
+  local fetch_dir=$2
+  local collect_cpu_info=$3
+
   # There is a random roachprod issue that we recently identified:
   # After a test finished successfully in a host, the following "roachprod get"
   # command didn't copy the result files correctly from the host node to the
@@ -200,10 +204,10 @@ function copy_result_with_retry() {
   # copy step if the previous copy failed with any empty result files, the test
   # will fail if after retry it still couldn't copy file correctly.
   #
-  target_dir=$(results_dir "$2")
+  target_dir=$(results_dir "$fetch_dir")
   for i in {1..3}
   do
-    roachprod get "$1" "./$2" "$target_dir"
+    roachprod get "$node" "./$fetch_dir" "$target_dir"
 
     result_files=$(find "$target_dir" -empty -type f -name "*.log")
     if [ -z "$result_files" ]
@@ -220,19 +224,10 @@ function copy_result_with_retry() {
     echo "Copy failed with empty result file(s) in "$target_dir", test failed!"
   fi
 
-  if [ "$2" == "tpcc-results" ]
+  if [ -n "$collect_cpu_info" ]
   then
-    result_files=$(find "$target_dir" -type f -name "*.txt")
-    for result_file in $result_files
-    do
-      prev_line=$(tail -2 "$result_file")
-      if [[ "$prev_line" != *efc* ]] || [[ $(tail -1 "$result_file" | awk '{if(int($3) > 87){print "pass"}}') != "pass" ]];
-      then
-      	# Instead of deleting invalid result files, we rename them for auditing
-      	# and validation purpose.
-        mv $result_file "$result_file.bak"
-      fi
-    done
+     roachprod run "$CLUSTER" -- cpufetch -s legacy > "$target_dir/cpu_info.txt"
+     roachprod run "$CLUSTER" -- lscpu  >> "$target_dir/cpu_info.txt"
   fi
 }
 
@@ -297,18 +292,13 @@ function bench_tpcc() {
     exit 1
   fi
 
-  if [[ -z $TPCC_WAREHOURSE_PER_VCPU ]]; then
-    echo "env var TPCC_WAREHOURSE_PER_VCPU must not be set empty"
-    exit 1
-  fi
-
   start_cockroach
   if [ $NODES -eq 2 ]; then
     pgurls=$(roachprod pgurl "$CLUSTER":1)
-    run_under_tmux "tpcc" "$CLUSTER:2" "./scripts/gen/tpcc.sh -a $TPCC_WAREHOURSE_PER_VCPU $tpcc_extra_args ${pgurls[@]}"
+    run_under_tmux "tpcc" "$CLUSTER:2" "./scripts/gen/tpcc.sh $tpcc_extra_args $TPCC_EXTRA_ARGS ${pgurls[@]}"
   else
     pgurls=$(roachprod pgurl "$CLUSTER":1-$((NODES-1)))
-    run_under_tmux "tpcc" "$CLUSTER:$NODES" "./scripts/gen/tpcc.sh -a $TPCC_WAREHOURSE_PER_VCPU $tpcc_extra_args ${pgurls[@]}"
+    run_under_tmux "tpcc" "$CLUSTER:$NODES" "./scripts/gen/tpcc.sh $tpcc_extra_args $TPCC_EXTRA_ARGS ${pgurls[@]}"
   fi
 }
 
@@ -324,7 +314,7 @@ function fetch_bench_tpcc_results() {
   # Don't exist if the following section gives error.
   set +e
   roachprod run $node ./scripts/gen/tpcc.sh -- -w
-  copy_result_with_retry $node "tpcc-results"
+  copy_result_with_retry $node "tpcc-results" "with_cpu_inf"
   set -e 
 }
 
