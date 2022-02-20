@@ -45,21 +45,6 @@
           "azure-availability-zone": "1"
         }
       },
-      "Standard_E8bs_v5": {
-        "roachprodArgs": {
-          "azure-volume-size": "1000",
-          "azure-locations": "eastus",
-          "west-azure-locations": "westus2",
-          "azure-availability-zone": "1"
-        }
-      },
-      "Standard_E32bs_v5": {
-        "roachprodArgs": {
-          "azure-locations": "eastus",
-          "west-azure-locations": "westus2",
-          "azure-availability-zone": "1"
-        }
-      },
       "Standard_E8s_v4": {
         "roachprodArgs": {
           "azure-volume-size": "1000"
@@ -153,21 +138,6 @@
       },
       "Standard_E32as_v4": null,
       "Standard_E32as_v5": {
-        "roachprodArgs": {
-          "azure-locations": "eastus",
-          "west-azure-locations": "westus2",
-          "azure-availability-zone": "1"
-        }
-      },
-      "Standard_E8bs_v5": {
-        "roachprodArgs": {
-          "azure-volume-size": "1000",
-          "azure-locations": "eastus",
-          "west-azure-locations": "westus2",
-          "azure-availability-zone": "1"
-        }
-      },
-      "Standard_E32bs_v5": {
         "roachprodArgs": {
           "azure-locations": "eastus",
           "west-azure-locations": "westus2",
