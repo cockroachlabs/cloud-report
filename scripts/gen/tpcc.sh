@@ -109,7 +109,7 @@ fi
 
 # The number of cockroachdb server to run the tpcc tests.
 num_servers=${#pgurls[@]}
-echo "num_servers:$num_servers, num_vcpu_per_node:$num_vcpu_per_node, f_active=$(( f_active_per_core * num_vcpu_per_node )), conns=$((num_vcpu_per_node * num_servers * 4))"
+echo "num_servers:$num_servers, num_vcpu_per_node:$num_vcpu_per_node, f_active=$f_active, conns=$((num_vcpu_per_node * num_servers * 4))"
 
 # We limit the number of connections to 4 * #crdb_server * #vcpu_per_node,
 # because in the production practice, "the total number of workload connections
