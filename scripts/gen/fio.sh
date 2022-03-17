@@ -88,12 +88,8 @@ df -h
 
 # Configure FIO with parameters dependent on the type of the disk (SSD vs attached)
 depth_multiplier=1
-latency_target_ms='1000'
-latency_pctl=95
 if [ -n "$f_ssd" ]; then
   depth_multiplier=16
-  latency_target_ms='10'
-  latency_pctl=99
 fi
 
 # Bandwidth benchmarks use large (1MB) block size, and run with iodepth_bw depth.
@@ -107,7 +103,6 @@ iodepth_latency=$((depth_multiplier * 16))
 cd "$(dirname $0)"
 sudo \
    env IODEPTH_BW=$iodepth_bw IODEPTH_IOPS=$iodepth_iops IODEPTH_LATENCY=$iodepth_latency \
-       LATENCY_TARGET="${latency_target_ms}ms" LATENCY_WINDOW="$((latency_target_ms * 10))ms" LATENCY_PCTL=$latency_pctl \
        OFFSET="$OFFSET" \
    fio --filename="/dev/$DEV" --output="$report" --output-format=json "$@" "${f_cfg}"
 
