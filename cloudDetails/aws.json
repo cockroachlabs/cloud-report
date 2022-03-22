@@ -5,67 +5,78 @@
     "machineTypes": {
       "m6i.2xlarge": {
         "roachprodArgs": {
-          "aws-ebs-volume-size": "1000"
+          "aws-ebs-volume-size": "1000",
+          "aws-ebs-iops": "8000"
         }
       },
       "m6i.8xlarge": null,
       "m5a.2xlarge": {
         "roachprodArgs": {
-          "aws-ebs-volume-size": "1000"
+          "aws-ebs-volume-size": "1000",
+          "aws-ebs-iops": "8000"
         }
       },
       "m5a.8xlarge": null,
       "m5n.2xlarge": {
         "roachprodArgs": {
-          "aws-ebs-volume-size": "1000"
+          "aws-ebs-volume-size": "1000",
+          "aws-ebs-iops": "8000"
         }
       },
       "m5n.8xlarge": null,
       "m5.2xlarge": {
         "roachprodArgs": {
-          "aws-ebs-volume-size": "1000"
+          "aws-ebs-volume-size": "1000",
+          "aws-ebs-iops": "8000"
         }
       },
       "m5.8xlarge": null,
       "c5a.2xlarge": {
         "roachprodArgs": {
-          "aws-ebs-volume-size": "1000"
+          "aws-ebs-volume-size": "1000",
+          "aws-ebs-iops": "8000"
         }
       },
       "c5a.8xlarge": null,
       "c5.2xlarge": {
         "roachprodArgs": {
-          "aws-ebs-volume-size": "1000"
+          "aws-ebs-volume-size": "1000",
+          "aws-ebs-iops": "8000"
         }
       },
       "c5.9xlarge": null,
       "c5n.2xlarge": {
         "roachprodArgs": {
-          "aws-ebs-volume-size": "1000"
+          "aws-ebs-volume-size": "1000",
+          "aws-ebs-iops": "8000"
         }
       },
       "c5n.9xlarge": null,
       "r5a.2xlarge": {
         "roachprodArgs": {
-          "aws-ebs-volume-size": "1000"
+          "aws-ebs-volume-size": "1000",
+          "aws-ebs-iops": "8000"
         }
       },
       "r5a.8xlarge": null,
       "r5.2xlarge": {
         "roachprodArgs": {
-          "aws-ebs-volume-size": "1000"
+          "aws-ebs-volume-size": "1000",
+          "aws-ebs-iops": "8000"
         }
       },
       "r5.8xlarge": null,
       "r5b.2xlarge": {
         "roachprodArgs": {
-          "aws-ebs-volume-size": "1000"
+          "aws-ebs-volume-size": "1000",
+          "aws-ebs-iops": "8000"
         }
       },
       "r5b.8xlarge": null,
       "r5n.2xlarge": {
         "roachprodArgs": {
-          "aws-ebs-volume-size": "1000"
+          "aws-ebs-volume-size": "1000",
+          "aws-ebs-iops": "8000"
         }
       },
       "r5n.8xlarge": null
@@ -78,7 +89,8 @@
       "aws-image-ami": "ami-036490d46656c4818",
       "west-aws-image-ami": "ami-0964546d3da97e3ab",
       "local-ssd": "false",
-      "aws-enable-multiple-stores": null
+      "aws-enable-multiple-stores": null,
+      "aws-ebs-iops": "16000"
     },
     "benchArgs": {
       "tpcc": " -L \" --provider-override=s3 --bucket-override=new-cloud-report-tpcc --auth-params-override=AUTH=implicit&AWS_REGION=us-east-1 \" -d 30m -W 10000 "
