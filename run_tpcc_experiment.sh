@@ -1,7 +1,5 @@
 #!/bin/bash
 
-# bash version should be > 5
-
 curdate=$(date '+%Y%m%d')
 cloud=
 args=
@@ -12,6 +10,7 @@ Usage: $0 -d date
   -d date: date of the folder of the script.
   -c cloud: the script from a specific cloud.
   -a args: arguments for each test script. (e.g. \"-b all -w net -d\")
+  -n: dry run; echo all runs but do not execute them.
 "
   exit 1
 }
@@ -38,10 +37,13 @@ if [[ ${#scriptPaths[@]} == 0 ]]
 then
   case "${cloud}" in
     aws)
-      mapfile -t scriptPaths < <( find ./report-data/$curdate/aws -name "*.sh" )
+      scriptPaths=($(find ./report-data/$curdate/aws -name "*.sh" | tr '\n' ' '))
       ;;
     gce)
-      mapfile -t scriptPaths < <( find ./report-data/$curdate/gce -name "*.sh" |grep standard|grep -v 30 )
+      scriptPaths=($(find ./report-data/$curdate/gce -name "*.sh" | tr '\n' ' '))
+      ;;
+    azure)
+      scriptPaths=($(find ./report-data/$curdate/azure -name "*.sh" | tr '\n' ' '))
       ;;
     *)
       echo "unsupported cloud name"
