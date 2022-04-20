@@ -22,6 +22,7 @@ packages=(
     fio netperf
     sysstat unzip jq
     snapd
+    prometheus-node-exporter
 )
 
 sudo apt-get update

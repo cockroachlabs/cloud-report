@@ -5,11 +5,11 @@ pidfile="$HOME/tpcc-bench.pid"
 f_force=''
 f_wait=''
 f_active=0
-f_warehouses=10000
+f_warehouses=40000
 f_active_per_core=125
 f_skip_load=''
 f_load_args=''
-f_duration="30m"
+f_duration="720h"
 
 function usage() {
   echo "$1
@@ -80,13 +80,13 @@ cd "$HOME"
 
 if [ -z "$f_skip_load" ]
 then
-  ./cockroach sql --insecure --url "${pgurls[0]}" -e "
+  ./cockroach sql --certs-dir=cert --url "${pgurls[0]}" -e "
 	 SET CLUSTER SETTING admission.kv.enabled = false;
 	 SET CLUSTER SETTING admission.sql_kv_response.enabled = false;
 	 SET CLUSTER SETTING admission.sql_sql_response.enabled = false;
 	 SET CLUSTER SETTING server.consistency_check.interval = '0s';
-   SET CLUSTER SETTING kv.range_merge.queue_enabled = false;
-   SET CLUSTER SETTING sql.stats.automatic_collection.enabled = false;
+         SET CLUSTER SETTING kv.range_merge.queue_enabled = false;
+         SET CLUSTER SETTING sql.stats.automatic_collection.enabled = false;
   ";
   echo "Loading TPCC fixture for $f_warehouses warehouses ..."
   # ./cockroach workload fixtures make tpcc --warehouses="$f_warehouses" $f_load_args "${pgurls[0]}"
@@ -109,7 +109,7 @@ fi
 
 # The number of cockroachdb server to run the tpcc tests.
 num_servers=${#pgurls[@]}
-echo "num_servers:$num_servers, num_vcpu_per_node:$num_vcpu_per_node, f_active=$f_active, conns=$((num_vcpu_per_node * num_servers * 4))"
+echo "num_servers:$num_servers, num_vcpu_per_node:$num_vcpu_per_node, f_active=$f_active, conns=$((num_vcpu_per_node * num_servers * 2))"
 
 # We limit the number of connections to 4 * #crdb_server * #vcpu_per_node,
 # because in the production practice, "the total number of workload connections
@@ -121,7 +121,7 @@ report="${logdir}/tpcc-results-$f_active.txt"
 ./cockroach workload run tpcc \
   --warehouses="$f_warehouses" \
   --active-warehouses="$f_active" \
-  --conns=$((num_vcpu_per_node * num_servers * 4)) \
+  --conns=$((num_vcpu_per_node * num_servers * 2)) \
   --ramp=5m --duration="$f_duration" \
   --tolerate-errors \
   --wait=0 \
