@@ -315,7 +315,7 @@ func parseCoremarkLog(p string) (int64, float64, error) {
 	// Extract the last line for the coremark output, and emit itersations/sec as well
 	// as (optional) number of cores that were used when running this benchmark.
 	cmd := exec.Command("sh", "-c",
-		fmt.Sprintf("tail  -1 -q %s |cut -d/ -f1,4 | cut -d: -f2", p))
+		fmt.Sprintf("tail -n 1 -q %s |cut -d/ -f1,4 | cut -d: -f2", p))
 	out, err := cmd.Output()
 	if err != nil {
 		return 0, 0, err
