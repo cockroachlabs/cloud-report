@@ -1,15 +1,14 @@
-# cloud-report-2021
+# cloud-report-2022
 
-Details about and from the Cloud Report done in Q4 2020
+Details about and from the Cloud Report done in Q2 2022
 
-In 2018, we produced a "Cloud Report", wherein we assessed the performance of AWS vs. GCP along dimensions like TPC-C throughput, I/O, CPU and latency. This year, we aim to produce a similar report but including Azure.
+From 2018 to 2021, we produced the series of "Cloud Report", wherein we assessed the performance of AWS vs. GCP along dimensions like TPC-C throughput, I/O, CPU and latency.
 
 This repo will let us aggregate and share data among team members, including processes and results. 
 
-* [Highlights from the 2021 Cloud Report](https://www.cockroachlabs.com/blog/2021-cloud-report/)
-* [2021 Cloud Report](https://www.cockroachlabs.com/guides/2021-cloud-report)
-
-
+Resources for Cloud Report:
+* [Highlights from the 2022 Cloud Report](https://www.cockroachlabs.com/blog/2022-cloud-report/)
+* [2022 Cloud Report](https://www.cockroachlabs.com/guides/2022-cloud-report)
 
 ## Enclosed Binary
 
@@ -25,14 +24,23 @@ _Note_: It would be possible to extend this binary to run on other platforms rel
 
 ## Staff
 
-**John Kendall** for Product
+**Keith McClellan** 
+- Vision, structure, messaging, writing
+
+**Charlie Custer** for Marketing
 - Vision, structure, messaging, writing
 
 **Jessica Edwards** for Marketing
 - Report production and promotion, messaging
 
-**Yevgeniy Miretsky** for Engineering
-- Data collection and aggregation
+**Lidor Carmel** for Engineering
+- Automation, data collection and analysis
 
-**Arul Ajmani** for Engineering
-- Data collection and aggregation
+**Yevgeniy Miretskiy** for Engineering 
+- Automation, data collection and analysis
+
+**Stan Rosenberg** for Engineering
+- Automation, data collection and analysis
+
+**Jane Xing** for Engineering
+- Automation, data collection and analysis
