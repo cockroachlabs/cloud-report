@@ -20,7 +20,8 @@ _Note_: It would be possible to extend this binary to run on other platforms rel
 
 ## TPC-C Reproduction Steps
 
-[This guide](https://www.cockroachlabs.com/docs/stable/performance-benchmarking-with-tpc-c-1k-warehouses.html) from the CockroachDB docs shows you how to run the TPC-C benchmark on CockroachDB to reproduce the TPC-C results in the report.
+* follow the steps in [`reproduction-steps.md`](reproduction-steps.md)
+* execute `run_tpcc_experiment.sh`; e.g., `./run_tpcc_experiment.sh -c aws`
 
 ## Staff
 
