@@ -5,10 +5,28 @@
         "machineTypes": {
             "n2-standard-8": {
                 "roachprodArgs": {
-                    "gce-pd-volume-size": "1000"
+                    "gce-min-cpu-platform": "Intel Ice Lake",
+                    "gce-zones": "us-central1-c"
                 }
             },
-            "n2-standard-32": null,
+            "n2-standard-32": {
+                "roachprodArgs": {
+                    "gce-min-cpu-platform": "Intel Ice Lake",
+                    "gce-zones": "us-central1-c"
+                }
+            },
+            "t2d-standard-8": {
+                "roachprodArgs": {
+                    "gce-min-cpu-platform": "Intel Ice Lake",
+                    "gce-zones": "us-central1-c"
+                }
+            },
+            "t2d-standard-32": {
+                "roachprodArgs": {
+                    "gce-min-cpu-platform": "Intel Ice Lake",
+                    "gce-zones": "us-central1-c"
+                }
+            },
             "n2d-standard-8":  {
                 "roachprodArgs": {
                     "gce-pd-volume-size": "1000",
@@ -66,12 +84,12 @@
                 }
             },
 
-            "n2-custom-8-32768": {
+            "n2-custom-8-16384": {
                 "roachprodArgs": {
                     "gce-pd-volume-size": "1000"
                 }
             },
-            "n2-custom-32-131072": null
+            "n2-custom-32-65536": null
         },
         "roachprodArgs": {
             "local-ssd": "false",
@@ -93,10 +111,28 @@
         "machineTypes": {
             "n2-standard-8": {
                 "roachprodArgs": {
-                    "gce-pd-volume-size": "1000"
+                    "gce-min-cpu-platform": "Intel Ice Lake",
+                    "gce-zones": "us-central1-c"
                 }
             },
-            "n2-standard-32": null,
+            "n2-standard-32": {
+                "roachprodArgs": {
+                    "gce-min-cpu-platform": "Intel Ice Lake",
+                    "gce-zones": "us-central1-c"
+                }
+            },
+            "t2d-standard-8": {
+                "roachprodArgs": {
+                    "gce-min-cpu-platform": "Intel Ice Lake",
+                    "gce-zones": "us-central1-c"
+                }
+            },
+            "t2d-standard-32": {
+                "roachprodArgs": {
+                    "gce-min-cpu-platform": "Intel Ice Lake",
+                    "gce-zones": "us-central1-c"
+                }
+            },
             "n2d-standard-8": {
                 "roachprodArgs": {
                     "gce-pd-volume-size": "1000",
@@ -148,12 +184,12 @@
                     "gce-min-cpu-platform": "AMD Milan"
                 }
             },
-            "n2-custom-8-32768": {
+            "n2-custom-8-16384": {
                 "roachprodArgs": {
                     "gce-pd-volume-size": "1000"
                 }
             },
-            "n2-custom-32-131072": null
+            "n2-custom-32-65536": null
         },
         "roachprodArgs": {
             "local-ssd": "false",

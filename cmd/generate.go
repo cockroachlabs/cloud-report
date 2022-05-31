@@ -107,6 +107,8 @@ function create_cluster() {
 
   roachprod run "$CLUSTER" -- tmux new -s "$TMUX_SESSION" -d
   roachprod run "$CLUSTER" -- tmux set-option remain-on-exit on
+
+  roachprod run "$CLUSTER":1 -- sudo lshw -c memory > "$logdir"/"$CLUSTER"_ram_info.txt
 }
 
 # Create roachprod in us-west2
